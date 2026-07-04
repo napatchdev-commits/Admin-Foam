@@ -188,7 +188,10 @@
       // Map details to printable Job Sheet
       document.getElementById('sheet-order-id').innerText = `#${selectedOrder.id}`;
       document.getElementById('sheet-created-date').innerText = selectedOrder.createdDate || '-';
-      document.getElementById('sheet-required-date').innerText = formatThaiDate(selectedOrder.requiredDate);
+      const formattedDate = formatThaiDate(selectedOrder.requiredDate);
+      document.getElementById('sheet-required-date').innerText = formattedDate;
+      const specRequiredDateEl = document.getElementById('sheet-spec-required-date');
+      if (specRequiredDateEl) specRequiredDateEl.innerText = formattedDate;
       document.getElementById('sheet-customer-name').innerText = selectedOrder.customerName;
       document.getElementById('sheet-groom-name').innerText = selectedOrder.groomName || '-';
       document.getElementById('sheet-bride-name').innerText = selectedOrder.brideName || '-';

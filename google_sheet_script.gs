@@ -233,7 +233,7 @@ function doPost(e) {
       // If it is a test notify request
       if (params.isTest) {
         var testMessage = "🔔 ทดสอบแจ้งเตือนระบบสั่งตัดโลโก้โฟม\nข้อความนี้ถูกส่งจากการตั้งค่าบน Google Sheets";
-        sendLinePushMessage(params.lineChannelAccessToken, params.lineRecipientId, testMessage);
+        sendLinePushMessage(params.lineChannelAccessToken, params.lineRecipientId, [{ type: "text", text: testMessage }]);
       }
       
       return jsonResponse({ success: true });
@@ -277,31 +277,56 @@ function triggerLineNotification(sheet, nextId, params, imageUrls) {
     var bride = params.brideName || "-";
     var notes = params.notes || "-";
     
-    var message = "🔔 มีงานสั่งตัดโลโก้โฟมใหม่! (รหัส #" + nextId + ")\n" +
-                  "👤 ลูกค้า: " + params.customerName + "\n" +
-                  "🤵 เจ้าบ่าว: " + groom + "\n" +
-                  "👰 เจ้าสาว: " + bride + "\n" +
-                  "📅 วันที่ใช้: " + params.requiredDate + "\n" +
-                  "📐 ขนาด: " + params.size + "\n" +
-                  "🎨 สี: " + params.color + "\n" +
-                  "📝 หมายเหตุ: " + notes;
+    var messageText = "🔔 มีงานสั่งตัดโลโก้โฟมใหม่! (รหัส #" + nextId + ")\n" +
+                      "👤 ลูกค้า: " + params.customerName + "\n" +
+                      "🤵 เจ้าบ่าว: " + groom + "\n" +
+                      "👰 เจ้าสาว: " + bride + "\n" +
+                      "📅 วันที่ใช้: " + params.requiredDate + "\n" +
+                      "📐 ขนาด: " + params.size + "\n" +
+                      "🎨 สี: " + params.color + "\n" +
+                      "📝 หมายเหตุ: " + notes;
+                      
+    var lineMessages = [
+      {
+        type: "text",
+        text: messageText
+      }
+    ];
+
+    // If there are uploaded images, convert them to direct URLs and add them to the message array
+    if (imageUrls && imageUrls.length > 0) {
+      for (var k = 0; k < imageUrls.length && lineMessages.length < 5; k++) {
+        var directUrl = getDirectImageUrlAppsScript(imageUrls[k]);
+        if (directUrl) {
+          lineMessages.push({
+            type: "image",
+            originalContentUrl: directUrl,
+            previewImageUrl: directUrl
+          });
+        }
+      }
+    }
                   
-    sendLinePushMessage(lineChannelAccessToken, lineRecipientId, message);
+    sendLinePushMessage(lineChannelAccessToken, lineRecipientId, lineMessages);
   } catch (err) {
     Logger.log("Error in triggerLineNotification: " + err.toString());
   }
 }
 
-function sendLinePushMessage(token, toId, text) {
+function getDirectImageUrlAppsScript(url) {
+  if (!url) return '';
+  var match = url.match(/\/file\/d\/([^/]+)/) || url.match(/id=([^&]+)/);
+  if (match && match[1]) {
+    return "https://lh3.googleusercontent.com/d/" + match[1];
+  }
+  return url;
+}
+
+function sendLinePushMessage(token, toId, messagesArray) {
   try {
     var payload = {
       to: toId,
-      messages: [
-        {
-          type: "text",
-          text: text
-        }
-      ]
+      messages: messagesArray
     };
     
     var options = {
