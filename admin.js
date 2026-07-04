@@ -152,12 +152,25 @@
       });
     }
 
+    function getDirectImageUrl(url) {
+      if (!url) return '';
+      const match = url.match(/\/file\/d\/([^/]+)/) || url.match(/id=([^&]+)/);
+      if (match && match[1]) {
+        return `https://lh3.googleusercontent.com/d/${match[1]}`;
+      }
+      return url;
+    }
+
     function formatThaiDate(dateString) {
       if (!dateString) return '-';
       try {
+        if (dateString.includes('T')) {
+          dateString = dateString.split('T')[0];
+        }
         const parts = dateString.split('-');
         if (parts.length !== 3) return dateString;
         const d = new Date(parts[0], parts[1] - 1, parts[2]);
+        if (isNaN(d.getTime())) return dateString;
         return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
       } catch (e) {
         return dateString;
@@ -191,7 +204,8 @@
         selectedOrder.images.forEach(imgUrl => {
           const wrapper = document.createElement('div');
           wrapper.className = 'job-sheet-image-wrapper';
-          wrapper.innerHTML = `<img src="${imgUrl}" alt="Foam logo sample image" onclick="window.open('${imgUrl}')" style="cursor: pointer;">`;
+          const directUrl = getDirectImageUrl(imgUrl);
+          wrapper.innerHTML = `<img src="${directUrl}" alt="Foam logo sample image" onclick="window.open('${directUrl}')" style="cursor: pointer;">`;
           imgContainer.appendChild(wrapper);
         });
       } else {
