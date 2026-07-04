@@ -246,63 +246,79 @@ function doPost(e) {
 }
 
 function triggerLineNotification(sheet, nextId, params, imageUrls) {
-  var configSheet = sheet.getSheetByName('Config') || createConfigSheet(sheet);
-  var configData = configSheet.getDataRange().getValues();
-  
-  var lineNotifyEnabled = false;
-  var lineChannelAccessToken = "";
-  var lineRecipientId = "";
-  
-  for (var i = 1; i < configData.length; i++) {
-    var key = configData[i][0];
-    var val = configData[i][1];
-    if (key === 'lineNotifyEnabled') lineNotifyEnabled = (val === true || val === 'true');
-    if (key === 'lineChannelAccessToken') lineChannelAccessToken = val;
-    if (key === 'lineRecipientId') lineRecipientId = val;
+  try {
+    var configSheet = sheet.getSheetByName('Config') || createConfigSheet(sheet);
+    var configData = configSheet.getDataRange().getValues();
+    
+    var lineNotifyEnabled = false;
+    var lineChannelAccessToken = "";
+    var lineRecipientId = "";
+    
+    for (var i = 1; i < configData.length; i++) {
+      var key = String(configData[i][0]).trim();
+      var val = configData[i][1];
+      if (key.toLowerCase() === 'linenotifyenabled') {
+        lineNotifyEnabled = (String(val).toLowerCase() === 'true' || val === true);
+      }
+      if (key.toLowerCase() === 'linechannelaccesstoken') {
+        lineChannelAccessToken = String(val).trim();
+      }
+      if (key.toLowerCase() === 'linerecipientid') {
+        lineRecipientId = String(val).trim();
+      }
+    }
+    
+    if (!lineNotifyEnabled || !lineChannelAccessToken || !lineRecipientId) {
+      Logger.log("LINE Notifications are disabled or config is incomplete.");
+      return;
+    }
+    
+    var groom = params.groomName || "-";
+    var bride = params.brideName || "-";
+    var notes = params.notes || "-";
+    
+    var message = "🔔 มีงานสั่งตัดโลโก้โฟมใหม่! (รหัส #" + nextId + ")\n" +
+                  "👤 ลูกค้า: " + params.customerName + "\n" +
+                  "🤵 เจ้าบ่าว: " + groom + "\n" +
+                  "👰 เจ้าสาว: " + bride + "\n" +
+                  "📅 วันที่ใช้: " + params.requiredDate + "\n" +
+                  "📐 ขนาด: " + params.size + "\n" +
+                  "🎨 สี: " + params.color + "\n" +
+                  "📝 หมายเหตุ: " + notes;
+                  
+    sendLinePushMessage(lineChannelAccessToken, lineRecipientId, message);
+  } catch (err) {
+    Logger.log("Error in triggerLineNotification: " + err.toString());
   }
-  
-  if (!lineNotifyEnabled || !lineChannelAccessToken || !lineRecipientId) {
-    return;
-  }
-  
-  var groom = params.groomName || "-";
-  var bride = params.brideName || "-";
-  var notes = params.notes || "-";
-  
-  var message = "🔔 มีงานสั่งตัดโลโก้โฟมใหม่! (รหัส #" + nextId + ")\n" +
-                "👤 ลูกค้า: " + params.customerName + "\n" +
-                "🤵 เจ้าบ่าว: " + groom + "\n" +
-                "👰 เจ้าสาว: " + bride + "\n" +
-                "📅 วันที่ใช้: " + params.requiredDate + "\n" +
-                "📐 ขนาด: " + params.size + "\n" +
-                "🎨 สี: " + params.color + "\n" +
-                "📝 หมายเหตุ: " + notes;
-                
-  sendLinePushMessage(lineChannelAccessToken, lineRecipientId, message);
 }
 
 function sendLinePushMessage(token, toId, text) {
-  var payload = {
-    to: toId,
-    messages: [
-      {
-        type: "text",
-        text: text
-      }
-    ]
-  };
-  
-  var options = {
-    method: "post",
-    contentType: "application/json",
-    headers: {
-      "Authorization": "Bearer " + token
-    },
-    payload: JSON.stringify(payload),
-    muteHttpExceptions: true
-  };
-  
-  UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", options);
+  try {
+    var payload = {
+      to: toId,
+      messages: [
+        {
+          type: "text",
+          text: text
+        }
+      ]
+    };
+    
+    var options = {
+      method: "post",
+      contentType: "application/json",
+      headers: {
+        "Authorization": "Bearer " + token
+      },
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    };
+    
+    var res = UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", options);
+    Logger.log("LINE push response: " + res.getContentText());
+  } catch (err) {
+    Logger.log("Error in sendLinePushMessage: " + err.toString());
+  }
 }
 
 // Initializing helpers
