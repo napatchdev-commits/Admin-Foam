@@ -1,0 +1,1550 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบหลังบ้าน | Admin Dashboard - Logo Foam</title>
+  <!-- Google Fonts: Prompt & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-color: #0b0712;
+      --card-bg: rgba(23, 15, 32, 0.7);
+      --border-color: rgba(212, 175, 55, 0.15);
+      --border-focus: rgba(229, 193, 88, 0.5);
+      --text-main: #f3f0f7;
+      --text-muted: #9c8da5;
+      --accent-color: #e5c158;
+      --gold-gradient: linear-gradient(135deg, #d4af37 0%, #996e00 100%);
+      --success-color: #10b981;
+      --warning-color: #f59e0b;
+      --info-color: #3b82f6;
+      --danger-color: #ef4444;
+      --font-family: 'Prompt', 'Outfit', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-family);
+      background-color: var(--bg-color);
+      background-image: radial-gradient(circle at 0% 0%, #1e1128 0%, #060408 100%);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Navbar */
+    nav {
+      background: rgba(15, 10, 22, 0.85);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border-color);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 700;
+      font-size: 1.25rem;
+      background: var(--gold-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 1.5rem;
+    }
+
+    .nav-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      font-family: var(--font-family);
+      font-size: 0.95rem;
+      cursor: pointer;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+
+    .nav-btn:hover, .nav-btn.active {
+      color: var(--accent-color);
+      border-color: var(--border-color);
+      background: rgba(212, 175, 55, 0.05);
+    }
+
+    /* Main Content */
+    main {
+      flex: 1;
+      padding: 2rem;
+      max-width: 1300px;
+      width: 100%;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: var(--accent-color);
+    }
+
+    .stat-card.pending::before { background: var(--warning-color); }
+    .stat-card.progress::before { background: var(--info-color); }
+    .stat-card.completed::before { background: var(--success-color); }
+
+    .stat-title {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    /* Glass Panels */
+    .panel {
+      background: var(--card-bg);
+      backdrop-filter: blur(15px);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 1.75rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .panel-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Filters Section */
+    .filter-bar {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+      width: 100%;
+    }
+
+    .filter-input {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    select.filter-select,
+    input.filter-select {
+      background: rgba(13, 8, 20, 0.8);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.6rem 0.85rem;
+      color: var(--text-main);
+      font-family: var(--font-family);
+      font-size: 0.9rem;
+      outline: none;
+      transition: all 0.2s;
+      width: 100%;
+    }
+
+    select.filter-select:focus,
+    input.filter-select:focus {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 8px rgba(229, 193, 88, 0.2);
+    }
+
+    /* Orders Table */
+    .table-container {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    th {
+      padding: 1rem;
+      color: var(--accent-color);
+      font-weight: 600;
+      font-size: 0.9rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    td {
+      padding: 1rem;
+      border-bottom: 1px solid rgba(212, 175, 55, 0.06);
+      font-size: 0.92rem;
+      vertical-align: middle;
+    }
+
+    tr:hover td {
+      background: rgba(212, 175, 55, 0.02);
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      text-align: center;
+    }
+
+    .badge.pending { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .badge.progress { background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .badge.completed { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
+
+    /* Buttons */
+    .btn {
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      font-family: var(--font-family);
+      font-size: 0.88rem;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+      outline: none;
+    }
+
+    .btn-gold {
+      background: var(--gold-gradient);
+      color: #1a0f02;
+      border: none;
+    }
+
+    .btn-gold:hover {
+      box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+      filter: brightness(1.15);
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+    }
+
+    .btn-outline:hover {
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+      background: rgba(212, 175, 55, 0.05);
+    }
+
+    .btn-action {
+      padding: 0.35rem 0.65rem;
+      font-size: 0.8rem;
+      border-radius: 6px;
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #f87171;
+    }
+
+    .btn-danger:hover {
+      background: rgba(239, 68, 68, 0.2);
+    }
+
+    /* Config Panel Styling */
+    .config-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .config-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .config-group label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .checkbox-container {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      user-select: none;
+      font-size: 0.9rem;
+    }
+
+    .checkbox-container input {
+      accent-color: var(--accent-color);
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Modal Styling */
+    .modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(6, 4, 8, 0.85);
+      backdrop-filter: blur(10px);
+      z-index: 1000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      padding: 1.5rem;
+    }
+
+    .modal-backdrop.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-content {
+      background: #11091a;
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 800px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+      animation: scaleUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      position: relative;
+    }
+
+    .modal-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid rgba(212, 175, 55, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-header-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--accent-color);
+    }
+
+    .modal-close {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.5rem;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .modal-close:hover {
+      color: var(--danger-color);
+    }
+
+    .modal-body {
+      padding: 1.5rem;
+    }
+
+    .modal-footer {
+      padding: 1.25rem 1.5rem;
+      border-top: 1px solid rgba(212, 175, 55, 0.1);
+      display: flex;
+      justify-content: flex-end;
+      gap: 1rem;
+    }
+
+    /* Print Preview (ใบสั่งงาน) Styling inside Web view */
+    .job-sheet-container {
+      background: #ffffff;
+      color: #111111;
+      padding: 2rem;
+      border-radius: 12px;
+      border: 1px solid #ddd;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      font-family: 'Prompt', sans-serif;
+    }
+
+    .job-sheet-header {
+      border-bottom: 3px double #d4af37;
+      padding-bottom: 1rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .job-sheet-title {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #907119;
+      letter-spacing: 0.5px;
+    }
+
+    .job-sheet-meta {
+      text-align: right;
+      font-size: 0.85rem;
+      line-height: 1.4;
+      color: #555555;
+    }
+
+    .job-sheet-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .job-sheet-group {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 1rem;
+      background: #f8fafc;
+    }
+
+    .job-sheet-group-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #aa7c11;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 0.4rem;
+      margin-bottom: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .job-sheet-item {
+      display: flex;
+      margin-bottom: 0.5rem;
+      font-size: 0.92rem;
+    }
+
+    .job-sheet-item-label {
+      width: 120px;
+      color: #666666;
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+
+    .job-sheet-item-value {
+      color: #111111;
+      font-weight: 600;
+    }
+
+    .job-sheet-images-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #aa7c11;
+      margin-bottom: 0.75rem;
+    }
+
+    .job-sheet-images-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .job-sheet-image-wrapper {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      overflow: hidden;
+      aspect-ratio: 4/3;
+      background: #f1f5f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .job-sheet-image-wrapper img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .job-sheet-footer {
+      border-top: 1px dashed #cbd5e1;
+      padding-top: 1.5rem;
+      margin-top: 1.5rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      text-align: center;
+      font-size: 0.85rem;
+      color: #555;
+    }
+
+    .signature-box {
+      border-bottom: 1px solid #888;
+      width: 180px;
+      margin: 1.5rem auto 0.5rem auto;
+      height: 25px;
+    }
+
+    /* Print media rules */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      
+      .modal-backdrop,
+      .modal-content,
+      #job-sheet-print-area,
+      #job-sheet-print-area * {
+        visibility: visible;
+      }
+
+      .modal-backdrop {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: auto;
+        background: none;
+        backdrop-filter: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      .modal-content {
+        border: none;
+        max-width: 100%;
+        max-height: none;
+        box-shadow: none;
+        background: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      .modal-header,
+      .modal-footer,
+      .modal-close {
+        display: none !important;
+      }
+
+      .job-sheet-container {
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        color: #000000 !important;
+        background: #ffffff !important;
+      }
+
+      .job-sheet-group {
+        background: #ffffff !important;
+        border: 1px solid #000000 !important;
+      }
+
+      .job-sheet-header {
+        border-bottom: 2px solid #000000 !important;
+      }
+      
+      .job-sheet-image-wrapper {
+        border: 1px solid #000000 !important;
+        background: #ffffff !important;
+      }
+
+      .signature-box {
+        border-bottom: 1px solid #000000 !important;
+      }
+    }
+
+    /* Mobile Responsive Styles for Admin Panel */
+    @media (max-width: 767px) {
+      main {
+        padding: 1rem;
+      }
+      
+      nav {
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1rem;
+      }
+      
+      .nav-links {
+        width: 100%;
+        justify-content: space-around;
+        gap: 0.5rem;
+      }
+      
+      .nav-btn {
+        flex: 1;
+        text-align: center;
+        padding: 0.4rem 0.2rem;
+        font-size: 0.85rem;
+      }
+      
+      .stats-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+      }
+      
+      .stat-card {
+        padding: 1rem;
+      }
+      
+      .stat-value {
+        font-size: 1.5rem;
+      }
+
+      .panel {
+        padding: 1rem;
+      }
+      
+      .panel-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+      }
+
+      .panel-header button {
+        width: 100%;
+      }
+      
+      .filter-bar {
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+      
+      .filter-bar input,
+      .filter-bar select,
+      .filter-bar button {
+        width: 100% !important;
+      }
+      
+      /* Make table cells stack vertically */
+      table, thead, tbody, th, td, tr {
+        display: block;
+      }
+      
+      thead {
+        display: none; /* Hide table headers */
+      }
+      
+      tr {
+        background: rgba(23, 15, 32, 0.4);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        margin-bottom: 1rem;
+        padding: 0.75rem;
+      }
+      
+      td {
+        border: none;
+        padding: 0.4rem 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.88rem;
+        text-align: right;
+      }
+      
+      td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: var(--accent-color);
+        text-align: left;
+        margin-right: 1rem;
+      }
+      
+      td:last-child {
+        margin-top: 0.5rem;
+        border-top: 1px solid rgba(212, 175, 55, 0.1);
+        padding-top: 0.75rem;
+        justify-content: flex-end;
+      }
+
+      /* Colors management adjustments */
+      #colors-list-body tr {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: none;
+        border: none;
+        border-bottom: 1px solid rgba(212, 175, 55, 0.06);
+        padding: 0.5rem 0;
+      }
+      #colors-list-body td {
+        display: inline-block;
+        width: auto;
+        padding: 0;
+      }
+      #colors-list-body td::before {
+        display: none;
+      }
+
+      /* Modal and Job sheet responsiveness */
+      .modal-content {
+        max-height: 95vh;
+        border-radius: 12px;
+      }
+      
+      .job-sheet-container {
+        padding: 1rem;
+      }
+      
+      .job-sheet-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+      }
+      
+      .job-sheet-title {
+        font-size: 1.3rem;
+      }
+      
+      .job-sheet-images-grid {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 0.75rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav>
+    <div class="nav-brand">
+      <span>👑 Admin Dashboard</span>
+    </div>
+    <div class="nav-links">
+      <button class="nav-btn active" id="btn-tab-orders" onclick="loadTab('orders')">คำสั่งซื้อ</button>
+      <button class="nav-btn" id="btn-tab-colors" onclick="loadTab('colors')">จัดการสีโฟม</button>
+      <button class="nav-btn" id="btn-tab-config" onclick="loadTab('config')">ตั้งค่าระบบ</button>
+    </div>
+  </nav>
+
+  <!-- Main View -->
+  <main>
+    
+    <!-- Orders Section -->
+    <div id="tab-orders">
+      <!-- Stats Cards -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-title">คำสั่งซื้อทั้งหมด</div>
+          <div class="stat-value" id="stat-total">0</div>
+        </div>
+        <div class="stat-card pending">
+          <div class="stat-title">รอดำเนินการ</div>
+          <div class="stat-value" id="stat-pending">0</div>
+        </div>
+        <div class="stat-card progress">
+          <div class="stat-title">กำลังผลิต</div>
+          <div class="stat-value" id="stat-progress">0</div>
+        </div>
+        <div class="stat-card completed">
+          <div class="stat-title">เสร็จสิ้นแล้ว</div>
+          <div class="stat-value" id="stat-completed">0</div>
+        </div>
+      </div>
+
+      <div style="margin-top: 1.5rem;"></div>
+
+      <!-- Orders Panel -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">📋 รายการสั่งตัดโลโก้โฟม</div>
+          <button class="btn btn-outline" onclick="fetchOrders()">🔄 รีเฟรชรายการ</button>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+          <input type="text" id="search-input" class="filter-select filter-input" placeholder="ค้นหาชื่อลูกค้า, เจ้าบ่าว, เจ้าสาว..." oninput="filterOrders()">
+          <select id="status-filter" class="filter-select" onchange="filterOrders()">
+            <option value="all">แสดงสถานะทั้งหมด</option>
+            <option value="รอดำเนินการ">รอดำเนินการ</option>
+            <option value="กำลังผลิต">กำลังผลิต</option>
+            <option value="เสร็จสิ้นแล้ว">เสร็จสิ้นแล้ว</option>
+          </select>
+          <input type="date" id="date-filter" class="filter-select" onchange="filterOrders()">
+          <button class="btn btn-outline btn-action" onclick="clearFilters()">ล้างตัวกรอง</button>
+        </div>
+
+        <!-- Table -->
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>รหัสสั่งตัด</th>
+                <th>ชื่อผู้สั่ง</th>
+                <th>รายละเอียดเจ้าบ่าว-เจ้าสาว</th>
+                <th>วันที่ใช้</th>
+                <th>ขนาด</th>
+                <th>สี</th>
+                <th>สถานะ</th>
+                <th>การจัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="orders-table-body">
+              <tr>
+                <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">กำลังโหลดข้อมูลคำสั่งตัด...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Colors Section -->
+    <div id="tab-colors" style="display: none;">
+      <div class="panel" style="max-width: 600px; margin: 0 auto;">
+        <div class="panel-header">
+          <div class="panel-title">🎨 จัดการตัวเลือกเฉดสีโฟม</div>
+        </div>
+
+        <!-- Add Color Panel -->
+        <div style="display: flex; gap: 0.75rem; margin-bottom: 1.5rem;">
+          <input type="text" id="new-color-input" class="filter-select" placeholder="พิมพ์ชื่อสีใหม่ที่ต้องการเพิ่ม...">
+          <button class="btn btn-gold" onclick="addNewColor()" style="flex-shrink: 0;">➕ เพิ่มเฉดสี</button>
+        </div>
+
+        <!-- Table -->
+        <div class="table-container">
+          <table style="width: 100%;">
+            <thead>
+              <tr>
+                <th style="width: 70%;">ชื่อเฉดสี</th>
+                <th style="text-align: right; width: 30%;">การจัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="colors-list-body">
+              <tr>
+                <td colspan="2" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">กำลังโหลดรายการสี...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Section -->
+    <div id="tab-config" style="display: none;">
+      <div class="panel" style="max-width: 600px; margin: 0 auto;">
+        <div class="panel-header">
+          <div class="panel-title">⚙️ ตั้งค่าระบบ (LINE Bot & Google Sheets)</div>
+        </div>
+
+        <form class="config-form" id="config-form" onsubmit="saveConfig(event)">
+          
+          <!-- LINE SECTION -->
+          <div class="panel-title" style="font-size: 1.05rem; color: var(--accent-color); margin-bottom: 0.5rem;">💬 ระบบแจ้งเตือนทาง LINE Bot</div>
+          
+          <div class="config-group">
+            <label class="checkbox-container">
+              <input type="checkbox" id="line-notify-enabled">
+              เปิดใช้งานระบบแจ้งเตือนผ่าน LINE Bot (Messaging API)
+            </label>
+          </div>
+
+          <div class="config-group">
+            <label for="line-token">LINE Channel Access Token</label>
+            <input type="text" id="line-token" class="filter-select" placeholder="ใส่ Channel Access Token ของคุณ">
+          </div>
+
+          <div class="config-group">
+            <label for="line-recipient">Recipient User ID / Group ID</label>
+            <input type="text" id="line-recipient" class="filter-select" placeholder="ใส่ User ID หรือ Group ID ที่ต้องการรับการแจ้งเตือน">
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem;">
+              *หมายเหตุ: LINE Messaging API ต้องระบุ ID ผู้รับโดยตรง ไม่สามารถระบุด้วยเบอร์โทรศัพท์หรือไอดีไลน์ปกติได้
+            </p>
+          </div>
+
+          <!-- Divider -->
+          <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.5rem 0;">
+
+          <!-- GOOGLE SHEETS SECTION -->
+          <div class="panel-title" style="font-size: 1.05rem; color: var(--accent-color); margin-bottom: 0.5rem;">📊 ระบบเชื่อมโยงฐานข้อมูล Google Sheets</div>
+          
+          <div class="config-group">
+            <label class="checkbox-container">
+              <input type="checkbox" id="google-sheet-sync-enabled">
+              เปิดใช้งานระบบเชื่อมโยงข้อมูลกับ Google Sheets
+            </label>
+          </div>
+
+          <div class="config-group">
+            <label for="google-sheet-url">Google Sheets Web App URL</label>
+            <input type="text" id="google-sheet-url" class="filter-select" placeholder="ใส่ Google Sheets Web App URL ของคุณ">
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem;">
+              *ขั้นตอน: นำสคริปต์จากไฟล์ google_sheet_script.gs ในโฟลเดอร์โครงการไปติดตั้งบน Google Sheet แล้ว Deploy เป็น Web App
+            </p>
+          </div>
+
+          <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+            <button type="submit" class="btn btn-gold">บันทึกการตั้งค่าระบบ</button>
+            <button type="button" class="btn btn-outline" onclick="testLineNotification()">ทดสอบแจ้งเตือน LINE</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Detail & Job Sheet Preview Modal -->
+  <div class="modal-backdrop" id="order-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-header-title" id="modal-title">รายละเอียดใบสั่งตัด #12345</div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      
+      <div class="modal-body">
+        
+        <!-- Editable Status bar inside modal -->
+        <div style="background: rgba(212, 175, 55, 0.05); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+          <div style="font-size: 0.95rem; font-weight: 500;">ปรับปรุงสถานะงานตัดโฟม:</div>
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <select id="modal-status-select" class="filter-select" style="padding: 0.4rem 0.8rem; width: auto; font-size: 0.85rem;">
+              <option value="รอดำเนินการ">รอดำเนินการ</option>
+              <option value="กำลังผลิต">กำลังผลิต</option>
+              <option value="เสร็จสิ้นแล้ว">เสร็จสิ้นแล้ว</option>
+            </select>
+            <button class="btn btn-gold btn-action" id="btn-update-status" onclick="updateOrderStatus()">อัปเดตสถานะ</button>
+          </div>
+        </div>
+
+        <!-- Printable Area -->
+        <div id="job-sheet-print-area">
+          <div class="job-sheet-container">
+            <div class="job-sheet-header">
+              <div>
+                <div class="job-sheet-title">ใบสั่งงานตัดโลโก้โฟม</div>
+                <div style="font-size: 0.9rem; color: #555; font-weight: 600;">โฟมคุณภาพดีพิเศษเพื่องานแต่ง & อีเวนต์</div>
+              </div>
+              <div class="job-sheet-meta">
+                <div>รหัสการสั่ง: <span id="sheet-order-id" style="font-weight: 700;">-</span></div>
+                <div>วันที่บันทึก: <span id="sheet-created-date">-</span></div>
+                <div>วันที่ใช้จริง: <span id="sheet-required-date" style="color: #c2410c; font-weight: 700;">-</span></div>
+              </div>
+            </div>
+
+            <div class="job-sheet-grid">
+              <div class="job-sheet-group">
+                <div class="job-sheet-group-title">👤 ข้อมูลผู้สั่งและงานแต่ง</div>
+                <div class="job-sheet-item">
+                  <div class="job-sheet-item-label">ชื่อผู้สั่งตัด:</div>
+                  <div class="job-sheet-item-value" id="sheet-customer-name">-</div>
+                </div>
+                <div class="job-sheet-item">
+                  <div class="job-sheet-item-label">ชื่อเจ้าบ่าว:</div>
+                  <div class="job-sheet-item-value" id="sheet-groom-name">-</div>
+                </div>
+                <div class="job-sheet-item">
+                  <div class="job-sheet-item-label">ชื่อเจ้าสาว:</div>
+                  <div class="job-sheet-item-value" id="sheet-bride-name">-</div>
+                </div>
+              </div>
+
+              <div class="job-sheet-group">
+                <div class="job-sheet-group-title">📐 ข้อมูลสเปกและชิ้นงาน</div>
+                <div class="job-sheet-item">
+                  <div class="job-sheet-item-label">ขนาด:</div>
+                  <div class="job-sheet-item-value" id="sheet-size">-</div>
+                </div>
+                <div class="job-sheet-item">
+                  <div class="job-sheet-item-label">สีที่เลือก:</div>
+                  <div class="job-sheet-item-value" id="sheet-color">-</div>
+                </div>
+                <div class="job-sheet-item">
+                  <div class="job-sheet-item-label">หมายเหตุ:</div>
+                  <div class="job-sheet-item-value" id="sheet-notes" style="font-style: italic;">-</div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="job-sheet-images-title">📸 รูปแบบตัวอย่างหรือรูปอ้างอิงสำหรับการตัดโฟม</div>
+              <div class="job-sheet-images-grid" id="sheet-images-container">
+                <!-- Image elements will be appended here dynamically -->
+              </div>
+            </div>
+
+            <div class="job-sheet-footer">
+              <div>
+                <div>ผู้รับงาน / ช่างตัดโฟม</div>
+                <div class="signature-box"></div>
+                <div>( .................................................. )</div>
+                <div style="margin-top: 0.25rem; font-size: 0.8rem; color: #777;">วันที่ ...... / ...... / ......</div>
+              </div>
+              <div>
+                <div>ผู้ตรวจรับของชิ้นงาน</div>
+                <div class="signature-box"></div>
+                <div>( .................................................. )</div>
+                <div style="margin-top: 0.25rem; font-size: 0.8rem; color: #777;">วันที่ ...... / ...... / ......</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-gold" onclick="window.print()">🖨️ ปริ้นท์ใบสั่งงาน (Print / PDF)</button>
+        <button class="btn btn-outline" onclick="closeModal()">ปิดหน้าต่าง</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Paste your Google Sheets Web App URL here as a hardcoded fallback
+    const DEFAULT_GOOGLE_SHEET_URL = "YOUR_GOOGLE_SHEET_WEB_APP_URL_HERE";
+
+    // Read URL from localStorage or use default fallback
+    let GOOGLE_SHEET_URL = localStorage.getItem('google_sheet_url') || DEFAULT_GOOGLE_SHEET_URL;
+
+    let allOrders = [];
+    let allColors = [];
+    let selectedOrder = null;
+
+    // View Navigation Tabs
+    function loadTab(tabName) {
+      document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById('btn-tab-' + tabName).classList.add('active');
+
+      document.getElementById('tab-orders').style.display = 'none';
+      document.getElementById('tab-colors').style.display = 'none';
+      document.getElementById('tab-config').style.display = 'none';
+
+      if (tabName === 'orders') {
+        document.getElementById('tab-orders').style.display = 'block';
+        fetchOrders();
+      } else if (tabName === 'colors') {
+        document.getElementById('tab-colors').style.display = 'block';
+        fetchColors();
+      } else {
+        document.getElementById('tab-config').style.display = 'block';
+        fetchConfig();
+      }
+    }
+
+    // Helper to check if Google Sheets Web App URL is set
+    function checkUrl() {
+      if (!GOOGLE_SHEET_URL || GOOGLE_SHEET_URL.includes("YOUR_GOOGLE_SHEET_WEB_APP_URL")) {
+        alert('กรุณากรอก Google Sheets Web App URL ในแท็บ "ตั้งค่าระบบ" ก่อนใช้งาน');
+        loadTab('config');
+        return false;
+      }
+      return true;
+    }
+
+    // Fetch orders from Google Sheets API
+    async function fetchOrders() {
+      if (!checkUrl()) return;
+
+      try {
+        const response = await fetch(GOOGLE_SHEET_URL + '?action=getOrders', { redirect: 'follow' });
+        if (response.ok) {
+          allOrders = await response.json();
+          updateStats();
+          filterOrders();
+        } else {
+          console.error('Failed to fetch orders');
+        }
+      } catch (err) {
+        console.error('Error fetching orders:', err);
+      }
+    }
+
+    // Update Statistics summary
+    function updateStats() {
+      const total = allOrders.length;
+      const pending = allOrders.filter(o => o.status === 'รอดำเนินการ').length;
+      const progress = allOrders.filter(o => o.status === 'กำลังผลิต').length;
+      const completed = allOrders.filter(o => o.status === 'เสร็จสิ้นแล้ว').length;
+
+      document.getElementById('stat-total').innerText = total;
+      document.getElementById('stat-pending').innerText = pending;
+      document.getElementById('stat-progress').innerText = progress;
+      document.getElementById('stat-completed').innerText = completed;
+    }
+
+    // Filter and search orders in the UI table
+    function filterOrders() {
+      const searchQuery = document.getElementById('search-input').value.toLowerCase();
+      const statusFilter = document.getElementById('status-filter').value;
+      const dateFilter = document.getElementById('date-filter').value;
+
+      const filtered = allOrders.filter(order => {
+        // Search filter
+        const matchSearch = 
+          order.customerName.toLowerCase().includes(searchQuery) ||
+          (order.groomName && order.groomName.toLowerCase().includes(searchQuery)) ||
+          (order.brideName && order.brideName.toLowerCase().includes(searchQuery)) ||
+          order.id.toString().includes(searchQuery);
+
+        // Status filter
+        const matchStatus = statusFilter === 'all' || order.status === statusFilter;
+
+        // Date filter
+        const matchDate = !dateFilter || order.requiredDate === dateFilter;
+
+        return matchSearch && matchStatus && matchDate;
+      });
+
+      renderTable(filtered);
+    }
+
+    // Clear all filters
+    function clearFilters() {
+      document.getElementById('search-input').value = '';
+      document.getElementById('status-filter').value = 'all';
+      document.getElementById('date-filter').value = '';
+      filterOrders();
+    }
+
+    // Render filtered orders into the HTML table
+    function renderTable(orders) {
+      const tbody = document.getElementById('orders-table-body');
+      tbody.innerHTML = '';
+
+      if (orders.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">ไม่พบข้อมูลรายการสั่งตัดตามตัวกรอง</td>
+          </tr>
+        `;
+        return;
+      }
+
+      // Sort by id (descending to show new orders first)
+      orders.sort((a, b) => b.id - a.id);
+
+      orders.forEach(order => {
+        const tr = document.createElement('tr');
+        
+        let statusClass = 'pending';
+        if (order.status === 'กำลังผลิต') statusClass = 'progress';
+        if (order.status === 'เสร็จสิ้นแล้ว') statusClass = 'completed';
+
+        // Format Bride and Groom names
+        const weddingNames = (order.groomName || order.brideName) 
+          ? `🤵 ${order.groomName || '-'} & 👰 ${order.brideName || '-'}` 
+          : '<span style="color: var(--text-muted); font-size: 0.8rem; font-style: italic;">ไม่มีระบุ (โลโก้ทั่วไป)</span>';
+
+        tr.innerHTML = `
+          <td data-label="รหัสสั่งตัด" style="font-family: 'Outfit', sans-serif; font-weight: 600;">#${order.id}</td>
+          <td data-label="ชื่อผู้สั่ง" style="font-weight: 500;">${order.customerName}</td>
+          <td data-label="รายละเอียด">${weddingNames}</td>
+          <td data-label="วันที่ใช้" style="color: var(--accent-color); font-weight: 500;">${formatThaiDate(order.requiredDate)}</td>
+          <td data-label="ขนาด">${order.size}</td>
+          <td data-label="สี">${order.color}</td>
+          <td data-label="สถานะ"><span class="badge ${statusClass}">${order.status}</span></td>
+          <td data-label="การจัดการ">
+            <div style="display: flex; gap: 0.5rem; justify-content: flex-end; width: 100%;">
+              <button class="btn btn-gold btn-action" onclick="openOrderModal(${order.id})" style="flex: 1; text-align: center;">🔍 เปิด</button>
+              <button class="btn btn-danger btn-action" onclick="deleteOrder(${order.id})">🗑️ ลบ</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function formatThaiDate(dateString) {
+      if (!dateString) return '-';
+      try {
+        const parts = dateString.split('-');
+        if (parts.length !== 3) return dateString;
+        const d = new Date(parts[0], parts[1] - 1, parts[2]);
+        return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
+      } catch (e) {
+        return dateString;
+      }
+    }
+
+    // Modal Control and job sheet mapping
+    function openOrderModal(orderId) {
+      selectedOrder = allOrders.find(o => o.id === orderId);
+      if (!selectedOrder) return;
+
+      document.getElementById('modal-title').innerText = `รายละเอียดใบสั่งตัด #${selectedOrder.id}`;
+      document.getElementById('modal-status-select').value = selectedOrder.status;
+
+      // Map details to printable Job Sheet
+      document.getElementById('sheet-order-id').innerText = `#${selectedOrder.id}`;
+      document.getElementById('sheet-created-date').innerText = selectedOrder.createdDate || '-';
+      document.getElementById('sheet-required-date').innerText = formatThaiDate(selectedOrder.requiredDate);
+      document.getElementById('sheet-customer-name').innerText = selectedOrder.customerName;
+      document.getElementById('sheet-groom-name').innerText = selectedOrder.groomName || '-';
+      document.getElementById('sheet-bride-name').innerText = selectedOrder.brideName || '-';
+      document.getElementById('sheet-size').innerText = selectedOrder.size;
+      document.getElementById('sheet-color').innerText = selectedOrder.color;
+      document.getElementById('sheet-notes').innerText = selectedOrder.notes || '-';
+
+      // Load Images
+      const imgContainer = document.getElementById('sheet-images-container');
+      imgContainer.innerHTML = '';
+      
+      if (selectedOrder.images && selectedOrder.images.length > 0) {
+        selectedOrder.images.forEach(imgUrl => {
+          const wrapper = document.createElement('div');
+          wrapper.className = 'job-sheet-image-wrapper';
+          wrapper.innerHTML = `<img src="${imgUrl}" alt="Foam logo sample image" onclick="window.open('${imgUrl}')" style="cursor: pointer;">`;
+          imgContainer.appendChild(wrapper);
+        });
+      } else {
+        imgContainer.innerHTML = '<div style="color: #666; font-style: italic;">ไม่มีการอัปโหลดรูปภาพ</div>';
+      }
+
+      document.getElementById('order-modal').classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('order-modal').classList.remove('active');
+      selectedOrder = null;
+    }
+
+    // Update order status call
+    async function updateOrderStatus() {
+      if (!selectedOrder) return;
+      if (!checkUrl()) return;
+      
+      const newStatus = document.getElementById('modal-status-select').value;
+      
+      try {
+        const response = await fetch(GOOGLE_SHEET_URL, {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'updateStatus',
+            id: selectedOrder.id,
+            status: newStatus
+          }),
+          redirect: 'follow'
+        });
+
+        if (response.ok) {
+          const resJson = await response.json();
+          if (resJson.success) {
+            selectedOrder.status = newStatus;
+            fetchOrders();
+            closeModal();
+            alert('อัปเดตสถานะสำเร็จ!');
+          } else {
+            alert('เกิดข้อผิดพลาด: ' + resJson.error);
+          }
+        } else {
+          alert('ไม่สามารถเชื่อมต่อ Google Sheets API ได้');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('เกิดข้อผิดพลาดในการติดต่อเซิร์ฟเวอร์');
+      }
+    }
+
+    // Delete order logic
+    async function deleteOrder(orderId) {
+      if (!confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบคำสั่งสั่งตัด #${orderId}?`)) return;
+      if (!checkUrl()) return;
+
+      try {
+        const response = await fetch(GOOGLE_SHEET_URL, {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'deleteOrder',
+            id: orderId
+          }),
+          redirect: 'follow'
+        });
+
+        if (response.ok) {
+          const resJson = await response.json();
+          if (resJson.success) {
+            fetchOrders();
+            alert('ลบข้อมูลสำเร็จ!');
+          } else {
+            alert('เกิดข้อผิดพลาด: ' + resJson.error);
+          }
+        } else {
+          alert('ไม่สามารถเชื่อมต่อ Google Sheets API ได้');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('เกิดข้อผิดพลาดในการติดต่อเซิร์ฟเวอร์');
+      }
+    }
+
+    // Colors list logic
+    async function fetchColors() {
+      if (!checkUrl()) return;
+
+      try {
+        const response = await fetch(GOOGLE_SHEET_URL + '?action=getColors', { redirect: 'follow' });
+        if (response.ok) {
+          allColors = await response.json();
+          renderColorsTable();
+        }
+      } catch (err) {
+        console.error('Error fetching colors:', err);
+      }
+    }
+
+    function renderColorsTable() {
+      const tbody = document.getElementById('colors-list-body');
+      tbody.innerHTML = '';
+
+      if (allColors.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="2" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">ไม่มีเฉดสีในตัวเลือกในขณะนี้</td>
+          </tr>
+        `;
+        return;
+      }
+
+      allColors.forEach(color => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="font-weight: 500; font-size: 0.95rem; padding: 0.75rem 1rem;">${color}</td>
+          <td style="text-align: right; padding: 0.75rem 1rem;">
+            <button class="btn btn-danger btn-action" onclick="deleteColor('${color}')">🗑️ ลบเฉดสี</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function addNewColor() {
+      const input = document.getElementById('new-color-input');
+      const colorVal = input.value.trim();
+
+      if (!colorVal) {
+        alert('กรุณากรอกชื่อเฉดสีที่ต้องการเพิ่ม');
+        return;
+      }
+      if (!checkUrl()) return;
+
+      try {
+        const response = await fetch(GOOGLE_SHEET_URL, {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'addColor',
+            color: colorVal
+          }),
+          redirect: 'follow'
+        });
+
+        if (response.ok) {
+          const resJson = await response.json();
+          if (resJson.success) {
+            input.value = '';
+            fetchColors();
+            alert('เพิ่มเฉดสีสำเร็จ!');
+          } else {
+            alert('เกิดข้อผิดพลาด: ' + resJson.error);
+          }
+        } else {
+          alert('ไม่สามารถเชื่อมต่อ Google Sheets API ได้');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('เกิดข้อผิดพลาดในการติดต่อเซิร์ฟเวอร์');
+      }
+    }
+
+    async function deleteColor(colorName) {
+      if (!confirm(`คุณต้องการลบเฉดสี "${colorName}" ใช่หรือไม่?\nการลบนี้จะส่งผลกับเฉดสีที่จะเลือกหน้าลูกค้า แต่ไม่มีผลย้อนหลังกับใบสั่งงานที่สั่งไปแล้ว`)) return;
+      if (!checkUrl()) return;
+
+      try {
+        const response = await fetch(GOOGLE_SHEET_URL, {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'deleteColor',
+            color: colorName
+          }),
+          redirect: 'follow'
+        });
+
+        if (response.ok) {
+          const resJson = await response.json();
+          if (resJson.success) {
+            fetchColors();
+            alert('ลบเฉดสีสำเร็จ!');
+          } else {
+            alert('เกิดข้อผิดพลาด: ' + resJson.error);
+          }
+        } else {
+          alert('ไม่สามารถเชื่อมต่อ Google Sheets API ได้');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('เกิดข้อผิดพลาดในการติดต่อเซิร์ฟเวอร์');
+      }
+    }
+
+    // Config Fetch & Save
+    async function fetchConfig() {
+      // Set the active Web App URL value in the input field
+      document.getElementById('google-sheet-url').value = GOOGLE_SHEET_URL.includes("YOUR_GOOGLE_SHEET_WEB_APP_URL") ? "" : GOOGLE_SHEET_URL;
+
+      if (!GOOGLE_SHEET_URL || GOOGLE_SHEET_URL.includes("YOUR_GOOGLE_SHEET_WEB_APP_URL")) {
+        document.getElementById('google-sheet-sync-enabled').checked = false;
+        return; // Skip reading from sheet since URL is not set
+      }
+
+      try {
+        const response = await fetch(GOOGLE_SHEET_URL + '?action=getConfig', { redirect: 'follow' });
+        if (response.ok) {
+          const config = await response.json();
+          document.getElementById('line-notify-enabled').checked = config.lineNotifyEnabled;
+          document.getElementById('line-token').value = config.lineChannelAccessToken || '';
+          document.getElementById('line-recipient').value = config.lineRecipientId || '';
+          document.getElementById('google-sheet-sync-enabled').checked = true;
+        }
+      } catch (err) {
+        console.error('Error fetching config:', err);
+      }
+    }
+
+    async function saveConfig(e) {
+      e.preventDefault();
+
+      const webAppUrl = document.getElementById('google-sheet-url').value.trim();
+      if (!webAppUrl) {
+        alert('กรุณากรอก Google Sheets Web App URL');
+        return;
+      }
+
+      // Save to localStorage
+      localStorage.setItem('google_sheet_url', webAppUrl);
+      GOOGLE_SHEET_URL = webAppUrl;
+
+      const config = {
+        action: 'saveConfig',
+        lineNotifyEnabled: document.getElementById('line-notify-enabled').checked,
+        lineChannelAccessToken: document.getElementById('line-token').value,
+        lineRecipientId: document.getElementById('line-recipient').value
+      };
+
+      try {
+        const response = await fetch(GOOGLE_SHEET_URL, {
+          method: 'POST',
+          body: JSON.stringify(config),
+          redirect: 'follow'
+        });
+
+        if (response.ok) {
+          const resJson = await response.json();
+          if (resJson.success) {
+            alert('บันทึกการตั้งค่าระบบและซิงค์กับ Google Sheets เรียบร้อยแล้ว!');
+            fetchConfig();
+          } else {
+            alert('บันทึกที่คิวเครื่องได้ แต่ไม่สามารถบันทึกไปคลาวด์ได้: ' + resJson.error);
+          }
+        } else {
+          alert('บันทึก URL ในบราวเซอร์แล้ว แต่มีปัญหาในการเชื่อมต่อไปยัง Google Sheets');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('บันทึกสำเร็จในระบบเบราว์เซอร์ แต่ไม่สามารถเชื่อมต่อคลาวด์ได้ กรุณาตรวจสอบอินเทอร์เน็ต');
+      }
+    }
+
+    async function testLineNotification() {
+      if (!checkUrl()) return;
+
+      const config = {
+        action: 'saveConfig',
+        lineNotifyEnabled: document.getElementById('line-notify-enabled').checked,
+        lineChannelAccessToken: document.getElementById('line-token').value,
+        lineRecipientId: document.getElementById('line-recipient').value,
+        isTest: true
+      };
+
+      try {
+        const response = await fetch(GOOGLE_SHEET_URL, {
+          method: 'POST',
+          body: JSON.stringify(config),
+          redirect: 'follow'
+        });
+
+        if (response.ok) {
+          const resJson = await response.json();
+          if (resJson.success) {
+            alert('ส่งการแจ้งเตือนทดสอบไปที่ LINE เรียบร้อยแล้ว! กรุณาตรวจสอบโทรศัพท์ของคุณ');
+          } else {
+            alert('ส่งการแจ้งเตือนทดสอบล้มเหลว: ' + resJson.error);
+          }
+        } else {
+          alert('เกิดข้อผิดพลาดในการเชื่อมต่อ Google Sheets API');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('เกิดข้อผิดพลาดในการติดต่อเซิร์ฟเวอร์');
+      }
+    }
+
+    // Init
+    window.addEventListener('DOMContentLoaded', () => {
+      // Try to load orders if URL is already defined
+      if (GOOGLE_SHEET_URL && !GOOGLE_SHEET_URL.includes("YOUR_GOOGLE_SHEET_WEB_APP_URL")) {
+        fetchOrders();
+      } else {
+        loadTab('config');
+      }
+    });
+  </script>
+</body>
+</html>
+</body>
+</html>
