@@ -277,11 +277,18 @@ function triggerLineNotification(sheet, nextId, params, imageUrls) {
     var bride = params.brideName || "-";
     var notes = params.notes || "-";
     
+    var rawDate = params.requiredDate;
+    var displayDate = rawDate;
+    if (rawDate && rawDate.split('-').length === 3) {
+      var dateParts = rawDate.split('-');
+      displayDate = dateParts[2] + "/" + dateParts[1] + "/" + (parseInt(dateParts[0]) + 543);
+    }
+    
     var messageText = "🔔 มีงานสั่งตัดโลโก้โฟมใหม่! (รหัส #" + nextId + ")\n" +
                       "👤 ลูกค้า: " + params.customerName + "\n" +
                       "🤵 เจ้าบ่าว: " + groom + "\n" +
                       "👰 เจ้าสาว: " + bride + "\n" +
-                      "📅 วันที่ใช้: " + params.requiredDate + "\n" +
+                      "📅 วันที่ใช้: " + displayDate + "\n" +
                       "📐 ขนาด: " + params.size + "\n" +
                       "🎨 สี: " + params.color + "\n" +
                       "📝 หมายเหตุ: " + notes;
