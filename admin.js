@@ -129,9 +129,14 @@
         if (order.status === 'เสร็จสิ้นแล้ว') statusClass = 'completed';
 
         // Format Bride and Groom names
-        const weddingNames = (order.groomName || order.brideName) 
-          ? `🤵 ${order.groomName || '-'} & 👰 ${order.brideName || '-'}` 
-          : '<span style="color: var(--text-muted); font-size: 0.8rem; font-style: italic;">ไม่มีระบุ (โลโก้ทั่วไป)</span>';
+        let weddingNames = "";
+        if (order.brideName === '[งานบวช]') {
+          weddingNames = `👶 งานบวช: นาค ${order.groomName || '-'}`;
+        } else if (order.groomName || order.brideName) {
+          weddingNames = `🤵 ${order.groomName || '-'} & 👰 ${order.brideName || '-'}`;
+        } else {
+          weddingNames = '<span style="color: var(--text-muted); font-size: 0.8rem; font-style: italic;">ไม่มีระบุ (โลโก้ทั่วไป)</span>';
+        }
 
         tr.innerHTML = `
           <td data-label="รหัสสั่งตัด" style="font-family: 'Outfit', sans-serif; font-weight: 600;">#${order.id}</td>
@@ -193,8 +198,18 @@
       const specRequiredDateEl = document.getElementById('sheet-spec-required-date');
       if (specRequiredDateEl) specRequiredDateEl.innerText = formattedDate;
       document.getElementById('sheet-customer-name').innerText = selectedOrder.customerName;
-      document.getElementById('sheet-groom-name').innerText = selectedOrder.groomName || '-';
-      document.getElementById('sheet-bride-name').innerText = selectedOrder.brideName || '-';
+      if (selectedOrder.brideName === '[งานบวช]') {
+        document.getElementById('sheet-group-title-1').innerText = "👤 ข้อมูลผู้สั่งและงานอุปสมบท";
+        document.getElementById('sheet-groom-label').innerText = "ชื่อนาค:";
+        document.getElementById('sheet-groom-name').innerText = "นาค " + (selectedOrder.groomName || '-');
+        document.getElementById('sheet-bride-row').style.display = 'none';
+      } else {
+        document.getElementById('sheet-group-title-1').innerText = "👤 ข้อมูลผู้สั่งและงานแต่ง";
+        document.getElementById('sheet-groom-label').innerText = "ชื่อเจ้าบ่าว:";
+        document.getElementById('sheet-groom-name').innerText = selectedOrder.groomName || '-';
+        document.getElementById('sheet-bride-row').style.display = 'flex';
+        document.getElementById('sheet-bride-name').innerText = selectedOrder.brideName || '-';
+      }
       document.getElementById('sheet-size').innerText = selectedOrder.size;
       document.getElementById('sheet-color').innerText = selectedOrder.color;
       document.getElementById('sheet-notes').innerText = selectedOrder.notes || '-';

@@ -284,14 +284,25 @@ function triggerLineNotification(sheet, nextId, params, imageUrls) {
       displayDate = dateParts[2] + "/" + dateParts[1] + "/" + (parseInt(dateParts[0]) + 543);
     }
     
-    var messageText = "🔔 มีงานสั่งตัดโลโก้โฟมใหม่! (รหัส #" + nextId + ")\n" +
-                      "👤 ลูกค้า: " + params.customerName + "\n" +
-                      "🤵 เจ้าบ่าว: " + groom + "\n" +
-                      "👰 เจ้าสาว: " + bride + "\n" +
-                      "📅 วันที่ใช้: " + displayDate + "\n" +
-                      "📐 ขนาด: " + params.size + "\n" +
-                      "🎨 สี: " + params.color + "\n" +
-                      "📝 หมายเหตุ: " + notes;
+    var messageText = "";
+    if (bride === '[งานบวช]') {
+      messageText = "🔔 มีงานสั่งตัดโลโก้โฟมใหม่! (งานบวช) (รหัส #" + nextId + ")\n" +
+                    "👤 ลูกค้า: " + params.customerName + "\n" +
+                    "👶 ชื่อนาค: " + groom + "\n" +
+                    "📅 วันที่ใช้: " + displayDate + "\n" +
+                    "📐 ขนาด: " + params.size + "\n" +
+                    "🎨 สี: " + params.color + "\n" +
+                    "📝 หมายเหตุ: " + notes;
+    } else {
+      messageText = "🔔 มีงานสั่งตัดโลโก้โฟมใหม่! (รหัส #" + nextId + ")\n" +
+                    "👤 ลูกค้า: " + params.customerName + "\n" +
+                    "🤵 เจ้าบ่าว: " + groom + "\n" +
+                    "👰 เจ้าสาว: " + bride + "\n" +
+                    "📅 วันที่ใช้: " + displayDate + "\n" +
+                    "📐 ขนาด: " + params.size + "\n" +
+                    "🎨 สี: " + params.color + "\n" +
+                    "📝 หมายเหตุ: " + notes;
+    }
                       
     var lineMessages = [
       {
