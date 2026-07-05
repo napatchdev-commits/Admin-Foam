@@ -1,2 +1,5 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Override GitHub language statistics to display JavaScript as dominant language
+index.html linguist-detectable=false
