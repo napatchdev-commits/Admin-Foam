@@ -9,6 +9,7 @@
  */
 
 function doGet(e) {
+  e = e || { parameter: {} };
   var action = e.parameter.action;
   var sheet = SpreadsheetApp.getActiveSpreadsheet();
   
@@ -114,13 +115,14 @@ function doGet(e) {
 }
 
 function doPost(e) {
+  e = e || { postData: { contents: "{}" } };
   function jsonResponse(data) {
     return ContentService.createTextOutput(JSON.stringify(data))
       .setMimeType(ContentService.MimeType.JSON);
   }
   
   try {
-    var params = JSON.parse(e.postData.contents);
+    var params = JSON.parse(e.postData.contents || "{}");
     var action = params.action;
     var sheet = SpreadsheetApp.getActiveSpreadsheet();
     
