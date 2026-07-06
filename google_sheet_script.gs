@@ -341,28 +341,39 @@ function triggerLineNotification(sheet, nextId, params, imageUrls) {
                     "📝 หมายเหตุ: " + notes;
     }
                       
-    var lineMessages = [
+    var textMessages = [
       {
         type: "text",
         text: messageText
       }
     ];
 
-    // If there are uploaded images, convert them to direct URLs and add them to the message array
+    // 1. Send the text notification first (guaranteed delivery)
+    sendLinePushMessage(lineChannelAccessToken, lineRecipientId, textMessages);
+
+    // 2. Send the image previews separately in a different API call
     if (imageUrls && imageUrls.length > 0) {
-      for (var k = 0; k < imageUrls.length && lineMessages.length < 5; k++) {
+      var imageMessages = [];
+      for (var k = 0; k < imageUrls.length && imageMessages.length < 4; k++) {
         var directUrl = getDirectImageUrlAppsScript(imageUrls[k]);
         if (directUrl) {
-          lineMessages.push({
+          imageMessages.push({
             type: "image",
             originalContentUrl: directUrl,
             previewImageUrl: directUrl
           });
         }
       }
+      
+      if (imageMessages.length > 0) {
+        // Send images in a separate try-catch block so that if the LINE API rejects them, the text message is already delivered
+        try {
+          sendLinePushMessage(lineChannelAccessToken, lineRecipientId, imageMessages);
+        } catch (imgErr) {
+          Logger.log("Error sending LINE images: " + imgErr.toString());
+        }
+      }
     }
-                  
-    sendLinePushMessage(lineChannelAccessToken, lineRecipientId, lineMessages);
   } catch (err) {
     Logger.log("Error in triggerLineNotification: " + err.toString());
   }
