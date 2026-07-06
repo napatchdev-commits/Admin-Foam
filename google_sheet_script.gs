@@ -53,6 +53,41 @@ function doGet(e) {
       return jsonResponse(orders);
     }
 
+    if (action === 'getCustomerOrders') {
+      var customerName = e.parameter.customerName;
+      if (!customerName) {
+        return jsonResponse([]);
+      }
+      customerName = customerName.trim().toLowerCase();
+      var orderSheet = sheet.getSheetByName('Orders') || createOrdersSheet(sheet);
+      var data = orderSheet.getDataRange().getValues();
+      if (data.length <= 1) return jsonResponse([]);
+      
+      var headers = data[0];
+      var customerNameIdx = headers.indexOf('customerName');
+      if (customerNameIdx === -1) return jsonResponse([]);
+      
+      var orders = [];
+      for (var i = 1; i < data.length; i++) {
+        var row = data[i];
+        var rowCustName = String(row[customerNameIdx]).trim().toLowerCase();
+        if (rowCustName === customerName) {
+          var order = {};
+          for (var j = 0; j < headers.length; j++) {
+            var key = headers[j];
+            var val = row[j];
+            if (key === 'id') val = Number(val);
+            if (key === 'images') {
+              val = val ? val.split(',').map(function(item) { return item.trim(); }) : [];
+            }
+            order[key] = val;
+          }
+          orders.push(order);
+        }
+      }
+      return jsonResponse(orders);
+    }
+
     if (action === 'getConfig') {
       var configSheet = sheet.getSheetByName('Config') || createConfigSheet(sheet);
       var data = configSheet.getDataRange().getValues();
