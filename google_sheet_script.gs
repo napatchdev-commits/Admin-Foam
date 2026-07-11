@@ -287,8 +287,13 @@ function doPost(e) {
 }
 
 function triggerLineNotification(sheet, nextId, params, imageUrls) {
+  sheet = sheet || SpreadsheetApp.getActiveSpreadsheet();
+  params = params || {};
+  imageUrls = imageUrls || [];
+  nextId = nextId || "TEST";
+  
+  var configSheet = sheet.getSheetByName('Config') || createConfigSheet(sheet);
   try {
-    var configSheet = sheet.getSheetByName('Config') || createConfigSheet(sheet);
     var configData = configSheet.getDataRange().getValues();
     
     var lineNotifyEnabled = false;
@@ -309,8 +314,13 @@ function triggerLineNotification(sheet, nextId, params, imageUrls) {
       }
     }
     
-    if (!lineNotifyEnabled || !lineChannelAccessToken || !lineRecipientId) {
-      Logger.log("LINE Notifications are disabled or config is incomplete.");
+    if (!lineNotifyEnabled) {
+      writeErrorToConfig(configSheet, "การแจ้งเตือนถูกปิดใช้งานใน Config (lineNotifyEnabled = false)");
+      return;
+    }
+    
+    if (!lineChannelAccessToken) {
+      writeErrorToConfig(configSheet, "ข้อมูลไม่ครบถ้วน: ไม่พบค่า LINE Token");
       return;
     }
     
@@ -351,35 +361,12 @@ function triggerLineNotification(sheet, nextId, params, imageUrls) {
         text: messageText
       }
     ];
-
-    // 1. Send the text notification first (guaranteed delivery)
-    sendLinePushMessage(lineChannelAccessToken, lineRecipientId, textMessages);
-
-    // 2. Send the image previews separately in a different API call
-    if (imageUrls && imageUrls.length > 0) {
-      var imageMessages = [];
-      for (var k = 0; k < imageUrls.length && imageMessages.length < 4; k++) {
-        var directUrl = getDirectImageUrlAppsScript(imageUrls[k]);
-        if (directUrl) {
-          imageMessages.push({
-            type: "image",
-            originalContentUrl: directUrl,
-            previewImageUrl: directUrl
-          });
-        }
-      }
-      
-      if (imageMessages.length > 0) {
-        // Send images in a separate try-catch block so that if the LINE API rejects them, the text message is already delivered
-        try {
-          sendLinePushMessage(lineChannelAccessToken, lineRecipientId, imageMessages);
-        } catch (imgErr) {
-          Logger.log("Error sending LINE images: " + imgErr.toString());
-        }
-      }
-    }
+ 
+    // Send text notification with error logger
+    sendLinePushMessage(lineChannelAccessToken, lineRecipientId, textMessages, configSheet);
   } catch (err) {
     Logger.log("Error in triggerLineNotification: " + err.toString());
+    writeErrorToConfig(configSheet, "Script Crash: " + err.toString());
   }
 }
 
@@ -392,8 +379,65 @@ function getDirectImageUrlAppsScript(url) {
   return url;
 }
 
-function sendLinePushMessage(token, toId, messagesArray) {
+function writeErrorToConfig(configSheet, errText) {
   try {
+    var data = configSheet.getDataRange().getValues();
+    var foundRow = -1;
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][0]).trim().toLowerCase() === 'lasterror') {
+        foundRow = i + 1;
+        break;
+      }
+    }
+    if (foundRow !== -1) {
+      configSheet.getRange(foundRow, 2).setValue(errText);
+    } else {
+      configSheet.appendRow(['lastError', errText]);
+    }
+  } catch (e) {
+    Logger.log("Failed to write error to sheet: " + e.toString());
+  }
+}
+
+function sendLinePushMessage(token, toId, messagesArray, configSheet) {
+  try {
+    // Autodetect LINE Notify (1-token free service) vs LINE Bot (Messaging API)
+    // If recipient ID is empty or token is standard 43-character notify token
+    var isLineNotify = (!toId || toId.trim() === "" || token.trim().length === 43);
+    
+    if (isLineNotify) {
+      var messageString = "";
+      messagesArray.forEach(function(msg) {
+        if (msg.type === "text") {
+          messageString += msg.text + "\n";
+        }
+      });
+      
+      var options = {
+        method: "post",
+        headers: {
+          "Authorization": "Bearer " + token
+        },
+        payload: {
+          message: messageString.trim()
+        },
+        muteHttpExceptions: true
+      };
+      
+      var res = UrlFetchApp.fetch("https://notify-api.line.me/api/notify", options);
+      var resText = res.getContentText();
+      var code = res.getResponseCode();
+      Logger.log("LINE Notify response: " + resText);
+      
+      if (code !== 200) {
+        writeErrorToConfig(configSheet, "LINE Notify Error code " + code + ": " + resText);
+      } else {
+        writeErrorToConfig(configSheet, "ไม่มีข้อผิดพลาด (ส่งผ่าน LINE Notify สำเร็จ: " + Utilities.formatDate(new Date(), "GMT+7", "yyyy-MM-dd HH:mm:ss") + ")");
+      }
+      return;
+    }
+
+    // LINE Bot Messaging API push message
     var payload = {
       to: toId,
       messages: messagesArray
@@ -410,9 +454,20 @@ function sendLinePushMessage(token, toId, messagesArray) {
     };
     
     var res = UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", options);
-    Logger.log("LINE push response: " + res.getContentText());
+    var resText = res.getContentText();
+    var code = res.getResponseCode();
+    Logger.log("LINE push response: " + resText);
+    
+    if (code !== 200) {
+      writeErrorToConfig(configSheet, "LINE Bot Error code " + code + ": " + resText);
+    } else {
+      writeErrorToConfig(configSheet, "ไม่มีข้อผิดพลาด (ส่งผ่าน LINE Bot สำเร็จ: " + Utilities.formatDate(new Date(), "GMT+7", "yyyy-MM-dd HH:mm:ss") + ")");
+    }
   } catch (err) {
     Logger.log("Error in sendLinePushMessage: " + err.toString());
+    if (configSheet) {
+      writeErrorToConfig(configSheet, "UrlFetchApp Error: " + err.toString());
+    }
   }
 }
 
