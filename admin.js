@@ -813,10 +813,10 @@
       const total = subtotal + shipping - discount;
       
       const printWindow = window.open('', '_blank');
-      printWindow.document.write(\`
+      printWindow.document.write(`
         <html>
         <head>
-          <title>ใบสรุปรายการสินค้า #\${invoiceNo}</title>
+          <title>ใบสรุปรายการสินค้า #${invoiceNo}</title>
           <link rel="preconnect" href="https://fonts.googleapis.com">
           <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
           <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700;800&family=Outfit:wght@400;700&display=swap" rel="stylesheet">
@@ -932,8 +932,8 @@
                 <td style="text-align: right;">
                   <div class="invoice-title">ใบเสร็จ / ใบวางบิล</div>
                   <div style="font-size: 0.88rem; color: #4b5563;">
-                    เลขที่บิล: <strong>\${invoiceNo}</strong><br>
-                    วันที่ออกบิล: \${displayDate}
+                    เลขที่บิล: <strong>${invoiceNo}</strong><br>
+                    วันที่ออกบิล: ${displayDate}
                   </div>
                 </td>
               </tr>
@@ -943,7 +943,7 @@
               <tr>
                 <td style="width: 50%;">
                   <span style="color: #6b7280; font-size: 0.8rem; display: block; margin-bottom: 2px;">ลูกค้าผู้จ่ายเงิน (Bill To)</span>
-                  <strong>คุณ \${customerName}</strong>
+                  <strong>คุณ ${customerName}</strong>
                 </td>
                 <td style="width: 50%;">
                   <span style="color: #6b7280; font-size: 0.8rem; display: block; margin-bottom: 2px;">ข้อมูลการจัดส่ง</span>
@@ -963,26 +963,26 @@
                 </tr>
               </thead>
               <tbody>
-                \${itemRowsHtml}
+                ${itemRowsHtml}
               </tbody>
             </table>
 
             <table class="totals-table">
               <tr>
                 <td>รวมค่าสินค้า:</td>
-                <td style="text-align: right;">\${subtotal.toLocaleString('th-TH')}.00</td>
+                <td style="text-align: right;">${subtotal.toLocaleString('th-TH')}.00</td>
               </tr>
               <tr>
                 <td>🚚 ค่าจัดส่ง:</td>
-                <td style="text-align: right;">\${shipping.toLocaleString('th-TH')}.00</td>
+                <td style="text-align: right;">${shipping.toLocaleString('th-TH')}.00</td>
               </tr>
               <tr>
                 <td>🏷️ ส่วนลด:</td>
-                <td style="text-align: right; color: red;">-\${discount.toLocaleString('th-TH')}.00</td>
+                <td style="text-align: right; color: red;">-${discount.toLocaleString('th-TH')}.00</td>
               </tr>
               <tr class="grand-total-row">
                 <td>ยอดสุทธิทั้งสิ้น:</td>
-                <td style="text-align: right;">\${Math.max(0, total).toLocaleString('th-TH')}.00</td>
+                <td style="text-align: right;">${Math.max(0, total).toLocaleString('th-TH')}.00</td>
               </tr>
             </table>
 
@@ -1009,7 +1009,7 @@
           </div>
         </body>
         </html>
-      \`);
+      `);
       printWindow.document.close();
       
       printWindow.setTimeout(() => {
