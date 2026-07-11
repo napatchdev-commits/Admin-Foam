@@ -16,6 +16,7 @@
       document.getElementById('tab-orders').style.display = 'none';
       document.getElementById('tab-colors').style.display = 'none';
       document.getElementById('tab-config').style.display = 'none';
+      document.getElementById('tab-billing').style.display = 'none';
 
       if (tabName === 'orders') {
         document.getElementById('tab-orders').style.display = 'block';
@@ -23,6 +24,9 @@
       } else if (tabName === 'colors') {
         document.getElementById('tab-colors').style.display = 'block';
         fetchColors();
+      } else if (tabName === 'billing') {
+        document.getElementById('tab-billing').style.display = 'block';
+        initializeBillingTab();
       } else {
         document.getElementById('tab-config').style.display = 'block';
         fetchConfig();
@@ -538,6 +542,482 @@
         alert('เกิดข้อผิดพลาดในการติดต่อเซิร์ฟเวอร์');
       }
     }
+
+    // Billing Tab Logic
+    let activeBillItems = [];
+
+    function initializeBillingTab() {
+      // Set bill date to today
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      document.getElementById('bill-date').value = `${year}-${month}-${day}`;
+      
+      // Clear billing search and populate left table
+      document.getElementById('billing-search').value = '';
+      populateBillingOrdersTable();
+    }
+
+    window.initializeBillingTab = initializeBillingTab;
+
+    function populateBillingOrdersTable() {
+      const tbody = document.getElementById('billing-orders-list');
+      tbody.innerHTML = '';
+      
+      if (!allOrders || allOrders.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 2rem;">ไม่มีข้อมูลคำสั่งตัด</td></tr>';
+        return;
+      }
+      
+      // Display orders sorted by id descending
+      const sortedOrders = [...allOrders].sort((a, b) => b.id - a.id);
+      
+      sortedOrders.forEach(order => {
+        const tr = document.createElement('tr');
+        tr.className = 'billing-order-row';
+        tr.setAttribute('data-customer', order.customerName.toLowerCase());
+        
+        let details = "";
+        if (order.brideName === '[งานบวช]') {
+          details = `งานบวช: นาค ${order.groomName}`;
+        } else if (order.brideName && order.groomName) {
+          details = `${order.groomName} & ${order.brideName}`;
+        } else {
+          details = "โลโก้ทั่วไป";
+        }
+        
+        // Strip bracket tags from display notes
+        const notesText = order.notes || '';
+        const cleanNotes = notesText.replace(/\[วัสดุ:\s*[^\]]+\]\s*/g, '').replace(/\[สัญลักษณ์:\s*[^\]]+\]\s*/g, '').trim();
+        if (cleanNotes) details += ` (${cleanNotes})`;
+
+        // Size and Color
+        const sizeVal = order.size || '';
+        const colorVal = order.color || '';
+        const specs = `${sizeVal} / สี: ${colorVal}`;
+
+        // Check if already in bill
+        const isInBill = activeBillItems.some(item => item.id === order.id);
+        const actionBtn = isInBill 
+          ? `<button class="btn btn-outline" onclick="removeOrderFromBill(${order.id})" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; border-color: #ef4444; color: #ef4444;">✕ ลบออก</button>`
+          : `<button class="btn btn-gold" onclick="addOrderToBill(${order.id})" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">➕ เพิ่มเข้าบิล</button>`;
+
+        tr.innerHTML = `
+          <td><strong>#${order.id}</strong></td>
+          <td>${order.customerName}</td>
+          <td style="font-size: 0.82rem; color: var(--text-muted);">
+            <div>${details}</div>
+            <div style="margin-top: 0.15rem; color: var(--accent-color); font-weight: 500;">${specs}</div>
+          </td>
+          <td style="text-align: center; white-space: nowrap;">${actionBtn}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    window.populateBillingOrdersTable = populateBillingOrdersTable;
+
+    function filterBillingOrders() {
+      const query = document.getElementById('billing-search').value.toLowerCase().trim();
+      const rows = document.querySelectorAll('.billing-order-row');
+      
+      rows.forEach(row => {
+        const customer = row.getAttribute('data-customer') || '';
+        const textContent = row.textContent.toLowerCase();
+        if (customer.includes(query) || textContent.includes(query)) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    }
+
+    window.filterBillingOrders = filterBillingOrders;
+
+    function addOrderToBill(orderId) {
+      const order = allOrders.find(o => o.id === orderId);
+      if (!order) return;
+      
+      if (activeBillItems.some(item => item.id === orderId)) return;
+      
+      // Add default price field
+      activeBillItems.push({
+        ...order,
+        billPrice: 0
+      });
+      
+      // Auto populate customer name if first item
+      const custNameInput = document.getElementById('bill-customer-name');
+      if (activeBillItems.length === 1 && !custNameInput.value.trim()) {
+        custNameInput.value = order.customerName;
+      }
+      
+      updateActiveBillTable();
+      populateBillingOrdersTable(); // Refresh Left column buttons
+    }
+
+    window.addOrderToBill = addOrderToBill;
+
+    function removeOrderFromBill(orderId) {
+      activeBillItems = activeBillItems.filter(item => item.id !== orderId);
+      updateActiveBillTable();
+      populateBillingOrdersTable(); // Refresh Left column buttons
+    }
+
+    window.removeOrderFromBill = removeOrderFromBill;
+
+    function updateActiveBillTable() {
+      const tbody = document.getElementById('active-bill-items');
+      tbody.innerHTML = '';
+      
+      if (activeBillItems.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 2.5rem;">กรุณาเลือกรายการชิ้นงานจากฝั่งซ้ายเพิ่มเข้ามาในบิล</td></tr>';
+        document.getElementById('bill-subtotal').innerText = '0';
+        document.getElementById('bill-total').innerText = '0';
+        return;
+      }
+      
+      activeBillItems.forEach(item => {
+        const tr = document.createElement('tr');
+        
+        let desc = "";
+        if (item.brideName === '[งานบวช]') {
+          desc = `งานตัดโฟมงานบวช: นาค ${item.groomName}`;
+        } else if (item.brideName && item.groomName) {
+          desc = `งานตัดโฟมแต่งงาน: ${item.groomName} & ${item.brideName}`;
+        } else {
+          desc = `งานตัดป้ายโลโก้โฟม:ทั่วไป (#${item.id})`;
+        }
+        
+        // Parse materials backing from notes
+        const notesVal = item.notes || '';
+        const materialMatch = notesVal.match(/\[วัสดุ:\s*([^\]]+)\]/);
+        const material = materialMatch ? materialMatch[1] : 'รองโฟม'; 
+        
+        const specs = `${item.size || '-'} (${material}) / สี: ${item.color || '-'}`;
+        
+        tr.innerHTML = `
+          <td>
+            <div style="font-weight: 600;">${desc}</div>
+            <div style="font-size: 0.72rem; color: #a1a1aa; margin-top: 0.15rem;">รหัสชิ้นงาน: #${item.id}</div>
+          </td>
+          <td style="font-size: 0.8rem; color: var(--text-muted);">${specs}</td>
+          <td style="text-align: right;">
+            <input type="number" id="bill-price-${item.id}" class="filter-select bill-item-price" value="${item.billPrice}" min="0" oninput="updateItemPrice(${item.id}, this.value)" style="width: 90px; text-align: right; padding: 0.25rem 0.5rem; font-size: 0.85rem; display: inline-block;">
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+      
+      calculateBillingTotal();
+    }
+
+    function updateItemPrice(orderId, val) {
+      const price = parseFloat(val) || 0;
+      const item = activeBillItems.find(i => i.id === orderId);
+      if (item) {
+        item.billPrice = price;
+      }
+      calculateBillingTotal();
+    }
+
+    window.updateItemPrice = updateItemPrice;
+
+    function calculateBillingTotal() {
+      let subtotal = 0;
+      activeBillItems.forEach(item => {
+        subtotal += item.billPrice;
+      });
+      
+      const shipping = parseFloat(document.getElementById('bill-shipping').value) || 0;
+      const discount = parseFloat(document.getElementById('bill-discount').value) || 0;
+      const total = subtotal + shipping - discount;
+      
+      document.getElementById('bill-subtotal').innerText = subtotal.toLocaleString('th-TH');
+      document.getElementById('bill-total').innerText = Math.max(0, total).toLocaleString('th-TH');
+    }
+
+    window.calculateBillingTotal = calculateBillingTotal;
+
+    function clearActiveBill() {
+      if (activeBillItems.length > 0 && !confirm("ต้องการล้างบิลนี้ใช่หรือไม่?")) return;
+      activeBillItems = [];
+      document.getElementById('bill-customer-name').value = '';
+      document.getElementById('bill-shipping').value = '0';
+      document.getElementById('bill-discount').value = '0';
+      updateActiveBillTable();
+      populateBillingOrdersTable();
+    }
+
+    window.clearActiveBill = clearActiveBill;
+
+    function printSummaryBill() {
+      if (activeBillItems.length === 0) {
+        alert("กรุณาเลือกรายการสินค้าเข้าบิลอย่างน้อย 1 ชิ้น");
+        return;
+      }
+      
+      const customerName = document.getElementById('bill-customer-name').value.trim() || "ลูกค้าสั่งตัดโลโก้โฟม";
+      
+      // Formatting date th
+      const billDateRaw = document.getElementById('bill-date').value;
+      let displayDate = billDateRaw;
+      if (billDateRaw) {
+        const parts = billDateRaw.split('-');
+        if (parts.length === 3) {
+          const monthsTh = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+          displayDate = `${parseInt(parts[2])} ${monthsTh[parseInt(parts[1]) - 1]} ${parseInt(parts[0]) + 543}`;
+        }
+      }
+      
+      const invoiceNo = "INV-" + new Date().toISOString().slice(2,10).replace(/-/g,"") + "-" + Math.floor(100 + Math.random() * 900);
+      
+      let itemRowsHtml = "";
+      let subtotal = 0;
+      
+      activeBillItems.forEach((item, index) => {
+        let desc = "";
+        if (item.brideName === '[งานบวช]') {
+          desc = `งานตัดป้ายโฟมงานบวช: นาค ${item.groomName}`;
+        } else if (item.brideName && item.groomName) {
+          desc = `งานตัดป้ายโฟมงานแต่ง: ${item.groomName} & ${item.brideName}`;
+        } else {
+          desc = `งานตัดป้ายโลโก้โฟมสั่งทำพิเศษ (#${item.id})`;
+        }
+        
+        const notesVal = item.notes || '';
+        const materialMatch = notesVal.match(/\[วัสดุ:\s*([^\]]+)\]/);
+        const material = materialMatch ? materialMatch[1] : 'รองโฟม'; 
+        
+        const specDetails = `ขนาด: ${item.size || '-'} (${material})<br>สีชิ้นงาน: ${item.color || '-'}`;
+        const price = item.billPrice;
+        subtotal += price;
+        
+        itemRowsHtml += `
+          <tr>
+            <td style="text-align: center; border: 1px solid #ddd; padding: 8px;">${index + 1}</td>
+            <td style="border: 1px solid #ddd; padding: 8px;">
+              <div style="font-weight: bold;">${desc}</div>
+              <div style="font-size: 0.8rem; color: #555; margin-top: 4px;">${specDetails}</div>
+            </td>
+            <td style="text-align: center; border: 1px solid #ddd; padding: 8px;">1</td>
+            <td style="text-align: right; border: 1px solid #ddd; padding: 8px;">${price.toLocaleString('th-TH')}.00</td>
+            <td style="text-align: right; border: 1px solid #ddd; padding: 8px;">${price.toLocaleString('th-TH')}.00</td>
+          </tr>
+        `;
+      });
+      
+      const shipping = parseFloat(document.getElementById('bill-shipping').value) || 0;
+      const discount = parseFloat(document.getElementById('bill-discount').value) || 0;
+      const total = subtotal + shipping - discount;
+      
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(\`
+        <html>
+        <head>
+          <title>ใบสรุปรายการสินค้า #\${invoiceNo}</title>
+          <link rel="preconnect" href="https://fonts.googleapis.com">
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+          <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700;800&family=Outfit:wght@400;700&display=swap" rel="stylesheet">
+          <style>
+            body {
+              font-family: 'Sarabun', sans-serif;
+              color: #1a1a1a;
+              margin: 0;
+              padding: 20px;
+              background-color: #fff;
+              line-height: 1.5;
+            }
+            .invoice-box {
+              max-width: 800px;
+              margin: auto;
+              padding: 10px;
+              background: #fff;
+            }
+            .header-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 20px;
+            }
+            .header-table td {
+              vertical-align: top;
+            }
+            .shop-title {
+              font-size: 1.6rem;
+              font-weight: 800;
+              color: #b45309;
+              margin: 0 0 5px 0;
+            }
+            .invoice-title {
+              font-size: 1.8rem;
+              font-weight: 800;
+              text-align: right;
+              color: #333;
+              margin: 0 0 10px 0;
+            }
+            .metadata-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 25px;
+              background-color: #f9fafb;
+              border-radius: 8px;
+              overflow: hidden;
+            }
+            .metadata-table td {
+              padding: 12px 15px;
+              border: 1px solid #e5e7eb;
+              font-size: 0.95rem;
+            }
+            .items-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 30px;
+            }
+            .items-table th {
+              background-color: #f3f4f6;
+              border: 1px solid #d1d5db;
+              padding: 10px;
+              font-weight: 700;
+              font-size: 0.95rem;
+            }
+            .totals-table {
+              width: 300px;
+              margin-left: auto;
+              border-collapse: collapse;
+              margin-bottom: 40px;
+            }
+            .totals-table td {
+              padding: 8px 12px;
+              border: 1px solid #e5e7eb;
+              font-size: 0.95rem;
+            }
+            .grand-total-row {
+              background-color: #fef3c7;
+              font-weight: 800;
+              font-size: 1.15rem !important;
+              color: #b45309;
+            }
+            .signature-section {
+              width: 100%;
+              margin-top: 50px;
+              border-collapse: collapse;
+            }
+            .signature-box {
+              width: 45%;
+              text-align: center;
+              border-top: 1px dashed #999;
+              padding-top: 10px;
+              font-size: 0.9rem;
+            }
+            @media print {
+              body { padding: 0; }
+              .invoice-box { padding: 0; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="invoice-box">
+            
+            <table class="header-table">
+              <tr>
+                <td>
+                  <div class="shop-title">ร้าน Sale Foam สั่งตัดโลโก้โฟม</div>
+                  <div style="font-size: 0.88rem; color: #4b5563;">
+                    ผู้ผลิตและจำหน่ายป้ายโฟมงานแต่งงาน งานบวช และงานอีเวนต์ต่างๆ<br>
+                    📞 ติดต่อโทร: 085-530-4890<br>
+                    💬 Line ID: napatch99
+                  </div>
+                </td>
+                <td style="text-align: right;">
+                  <div class="invoice-title">ใบเสร็จ / ใบวางบิล</div>
+                  <div style="font-size: 0.88rem; color: #4b5563;">
+                    เลขที่บิล: <strong>\${invoiceNo}</strong><br>
+                    วันที่ออกบิล: \${displayDate}
+                  </div>
+                </td>
+              </tr>
+            </table>
+
+            <table class="metadata-table">
+              <tr>
+                <td style="width: 50%;">
+                  <span style="color: #6b7280; font-size: 0.8rem; display: block; margin-bottom: 2px;">ลูกค้าผู้จ่ายเงิน (Bill To)</span>
+                  <strong>คุณ \${customerName}</strong>
+                </td>
+                <td style="width: 50%;">
+                  <span style="color: #6b7280; font-size: 0.8rem; display: block; margin-bottom: 2px;">ข้อมูลการจัดส่ง</span>
+                  จัดส่งทางไปรษณีย์ / ขนส่งด่วนพิเศษ (ตามที่อยู่ที่แจ้งไว้)
+                </td>
+              </tr>
+            </table>
+
+            <table class="items-table">
+              <thead>
+                <tr>
+                  <th style="width: 8%; text-align: center;">ลำดับ</th>
+                  <th style="width: 52%; text-align: left;">รายละเอียดสินค้า/รายการสั่งตัด</th>
+                  <th style="width: 10%; text-align: center;">จำนวน</th>
+                  <th style="width: 15%; text-align: right;">ราคาต่อชิ้น</th>
+                  <th style="width: 15%; text-align: right;">จำนวนเงิน (บาท)</th>
+                </tr>
+              </thead>
+              <tbody>
+                \${itemRowsHtml}
+              </tbody>
+            </table>
+
+            <table class="totals-table">
+              <tr>
+                <td>รวมค่าสินค้า:</td>
+                <td style="text-align: right;">\${subtotal.toLocaleString('th-TH')}.00</td>
+              </tr>
+              <tr>
+                <td>🚚 ค่าจัดส่ง:</td>
+                <td style="text-align: right;">\${shipping.toLocaleString('th-TH')}.00</td>
+              </tr>
+              <tr>
+                <td>🏷️ ส่วนลด:</td>
+                <td style="text-align: right; color: red;">-\${discount.toLocaleString('th-TH')}.00</td>
+              </tr>
+              <tr class="grand-total-row">
+                <td>ยอดสุทธิทั้งสิ้น:</td>
+                <td style="text-align: right;">\${Math.max(0, total).toLocaleString('th-TH')}.00</td>
+              </tr>
+            </table>
+
+            <div style="text-align: center; margin: 40px 0; font-style: italic; color: #4b5563; font-size: 0.9rem;">
+              *ขอขอบคุณลูกค้าทุกท่านที่วางใจเลือกใช้บริการตัดป้ายโฟมกับร้านเราครับ*
+            </div>
+
+            <table class="signature-section">
+              <tr>
+                <td class="signature-box" style="width: 40%;">
+                  <br><br>
+                  (....................................................)<br>
+                  <span style="font-size: 0.8rem; color: #4b5563; margin-top: 5px; display: block;">ลูกค้าผู้ชำระเงิน</span>
+                </td>
+                <td style="width: 20%;"></td>
+                <td class="signature-box" style="width: 40%;">
+                  <br><br>
+                  (....................................................)<br>
+                  <span style="font-size: 0.8rem; color: #4b5563; margin-top: 5px; display: block;">แอดมินร้านผู้รับเงิน / ผู้ส่งชิ้นงาน</span>
+                </td>
+              </tr>
+            </table>
+
+          </div>
+        </body>
+        </html>
+      \`);
+      printWindow.document.close();
+      
+      printWindow.setTimeout(() => {
+        printWindow.print();
+      }, 500);
+    }
+
+    window.printSummaryBill = printSummaryBill;
 
     // Init
     window.addEventListener('DOMContentLoaded', () => {
