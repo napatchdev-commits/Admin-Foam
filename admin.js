@@ -441,7 +441,31 @@
       }
     }
 
-    // Config Fetch & Save
+    // Config Fetch & Save with QR Upload
+    let tempQrImage = null;
+
+    function handleQrFileSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        tempQrImage = {
+          filename: file.name,
+          data: e.target.result
+        };
+        
+        // Update local preview
+        const imgPreview = document.getElementById('payment-qr-preview');
+        imgPreview.src = e.target.result;
+        document.getElementById('payment-qr-preview-container').style.display = 'block';
+        document.getElementById('payment-qr-url').value = file.name + ' (รอกดบันทึกเพื่ออัปโหลด)';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    window.handleQrFileSelect = handleQrFileSelect;
+
     async function fetchConfig() {
       // Set the active Web App URL value in the input field
       document.getElementById('google-sheet-url').value = GOOGLE_SHEET_URL.includes("YOUR_GOOGLE_SHEET_WEB_APP_URL") ? "" : GOOGLE_SHEET_URL;
@@ -458,8 +482,22 @@
           document.getElementById('line-notify-enabled').checked = config.lineNotifyEnabled;
           document.getElementById('line-token').value = config.lineChannelAccessToken || '';
           document.getElementById('line-recipient').value = config.lineRecipientId || '';
-          document.getElementById('payment-details').value = config.paymentDetails || '';
+          
+          // Split fields
+          document.getElementById('payment-bank').value = config.paymentBank || '';
+          document.getElementById('payment-account-number').value = config.paymentAccountNumber || '';
+          document.getElementById('payment-account-name').value = config.paymentAccountName || '';
           document.getElementById('payment-qr-url').value = config.paymentQrUrl || '';
+          
+          // Update QR Code Preview
+          if (config.paymentQrUrl) {
+            const directUrl = getDirectImageUrl(config.paymentQrUrl);
+            document.getElementById('payment-qr-preview').src = directUrl;
+            document.getElementById('payment-qr-preview-container').style.display = 'block';
+          } else {
+            document.getElementById('payment-qr-preview-container').style.display = 'none';
+          }
+          
           document.getElementById('google-sheet-sync-enabled').checked = true;
         }
       } catch (err) {
@@ -480,13 +518,22 @@
       localStorage.setItem('google_sheet_url', webAppUrl);
       GOOGLE_SHEET_URL = webAppUrl;
 
+      // Disable button during saving upload
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      const originalText = submitBtn.innerText;
+      submitBtn.disabled = true;
+      submitBtn.innerText = 'กำลังบันทึกและอัปโหลดคิวอาร์...';
+
       const config = {
         action: 'saveConfig',
         lineNotifyEnabled: document.getElementById('line-notify-enabled').checked,
         lineChannelAccessToken: document.getElementById('line-token').value,
         lineRecipientId: document.getElementById('line-recipient').value,
-        paymentDetails: document.getElementById('payment-details').value,
-        paymentQrUrl: document.getElementById('payment-qr-url').value
+        paymentBank: document.getElementById('payment-bank').value.trim(),
+        paymentAccountNumber: document.getElementById('payment-account-number').value.trim(),
+        paymentAccountName: document.getElementById('payment-account-name').value.trim(),
+        paymentQrUrl: document.getElementById('payment-qr-url').value.trim(),
+        qrImage: tempQrImage
       };
 
       try {
@@ -499,7 +546,8 @@
         if (response.ok) {
           const resJson = await response.json();
           if (resJson.success) {
-            alert('บันทึกการตั้งค่าระบบและซิงค์กับ Google Sheets เรียบร้อยแล้ว!');
+            alert('บันทึกการตั้งค่าระบบและอัปโหลดข้อมูลชำระเงินเรียบร้อยแล้ว!');
+            tempQrImage = null; // Clear upload buffer
             fetchConfig();
           } else {
             alert('บันทึกที่คิวเครื่องได้ แต่ไม่สามารถบันทึกไปคลาวด์ได้: ' + resJson.error);
@@ -510,6 +558,9 @@
       } catch (err) {
         console.error(err);
         alert('บันทึกสำเร็จในระบบเบราว์เซอร์ แต่ไม่สามารถเชื่อมต่อคลาวด์ได้ กรุณาตรวจสอบอินเทอร์เน็ต');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = originalText;
       }
     }
 
@@ -676,7 +727,7 @@
       tbody.innerHTML = '';
       
       if (activeBillItems.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 2.5rem;">กรุณาเลือกรายการชิ้นงานจากฝั่งซ้ายเพิ่มเข้ามาในบิล</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 2.5rem;">กรุณาเลือกรายการชิ้นงานจากฝั่งซ้ายเพิ่มเข้ามาในบิล</td></tr>';
         document.getElementById('bill-subtotal').innerText = '0';
         document.getElementById('bill-total').innerText = '0';
         return;
@@ -701,14 +752,27 @@
         
         const specs = `${item.size || '-'} (${material}) / สี: ${item.color || '-'}`;
         
+        // Finished Image Slot
+        const imgDirectUrl = item.finishedImage ? getDirectImageUrl(item.finishedImage) : '';
+        const imgHtml = imgDirectUrl
+          ? `<img src="${imgDirectUrl}" style="width: 45px; height: 45px; object-fit: contain; border-radius: 4px; border: 1.5px solid var(--border-color); background: #fff; cursor: pointer; display: block; margin: 0 auto;" onclick="window.open('${imgDirectUrl}')">`
+          : `<span style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-bottom: 2px;">ยังไม่มีรูป</span>`;
+
         tr.innerHTML = `
           <td>
             <div style="font-weight: 600;">${desc}</div>
             <div style="font-size: 0.72rem; color: #a1a1aa; margin-top: 0.15rem;">รหัสชิ้นงาน: #${item.id}</div>
           </td>
           <td style="font-size: 0.8rem; color: var(--text-muted);">${specs}</td>
+          <td style="text-align: center; vertical-align: middle;">
+            <div id="finished-preview-container-${item.id}" style="min-height: 45px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+              ${imgHtml}
+            </div>
+            <input type="file" id="finished-file-${item.id}" accept="image/*" onchange="handleFinishedImageUpload(${item.id}, event)" style="display: none;">
+            <button class="btn btn-outline" onclick="document.getElementById('finished-file-${item.id}').click()" style="padding: 2px 6px; font-size: 0.65rem; margin-top: 3px; border-color: var(--accent-color); color: var(--accent-color);">📁 รูปเสร็จ</button>
+          </td>
           <td style="text-align: right;">
-            <input type="number" id="bill-price-${item.id}" class="filter-select bill-item-price" value="${item.billPrice}" min="0" oninput="updateItemPrice(${item.id}, this.value)" style="width: 90px; text-align: right; padding: 0.25rem 0.5rem; font-size: 0.85rem; display: inline-block;">
+            <input type="number" id="bill-price-${item.id}" class="filter-select bill-item-price" value="${item.billPrice}" min="0" oninput="updateItemPrice(${item.id}, this.value)" style="width: 75px; text-align: right; padding: 0.25rem 0.4rem; font-size: 0.85rem; display: inline-block;">
           </td>
         `;
         tbody.appendChild(tr);
@@ -716,6 +780,65 @@
       
       calculateBillingTotal();
     }
+
+    function handleFinishedImageUpload(orderId, event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const previewDiv = document.getElementById(`finished-preview-container-${orderId}`);
+      previewDiv.innerHTML = '<span style="font-size: 0.62rem; color: var(--accent-color); display: block; text-align: center; line-height: 1.2;">กำลังอัปโหลดรูป...</span>';
+
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        const payload = {
+          action: 'updateFinishedImage',
+          id: orderId,
+          image: {
+            filename: file.name,
+            data: e.target.result
+          }
+        };
+
+        try {
+          const response = await fetch(GOOGLE_SHEET_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+            redirect: 'follow'
+          });
+
+          if (response.ok) {
+            const resJson = await response.json();
+            if (resJson.success && resJson.finishedImage) {
+              const updatedUrl = resJson.finishedImage;
+              
+              // Update in activeBillItems
+              const billItem = activeBillItems.find(item => item.id === orderId);
+              if (billItem) billItem.finishedImage = updatedUrl;
+              
+              // Update in allOrders
+              const orderItem = allOrders.find(o => o.id === orderId);
+              if (orderItem) orderItem.finishedImage = updatedUrl;
+
+              updateActiveBillTable();
+              alert('อัปโหลดรูปชิ้นงานเสร็จแล้วเรียบร้อย!');
+            } else {
+              alert('อัปโหลดล้มเหลว: ' + resJson.error);
+              updateActiveBillTable();
+            }
+          } else {
+            alert('การเชื่อมต่อเซิร์ฟเวอร์ผิดพลาด');
+            updateActiveBillTable();
+          }
+        } catch (err) {
+          console.error(err);
+          alert('เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ');
+          updateActiveBillTable();
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+
+    window.handleFinishedImageUpload = handleFinishedImageUpload;
 
     function updateItemPrice(orderId, val) {
       const price = parseFloat(val) || 0;
@@ -798,16 +921,29 @@
         const price = item.billPrice;
         subtotal += price;
         
+        const finishedImgDirectUrl = item.finishedImage ? getDirectImageUrl(item.finishedImage) : '';
+        
         itemRowsHtml += `
           <tr>
-            <td style="text-align: center; border: 1px solid #ddd; padding: 8px;">${index + 1}</td>
-            <td style="border: 1px solid #ddd; padding: 8px;">
-              <div style="font-weight: bold;">${desc}</div>
-              <div style="font-size: 0.8rem; color: #555; margin-top: 4px;">${specDetails}</div>
+            <td style="text-align: center; border: 1px solid #ddd; padding: 8px; vertical-align: middle;">${index + 1}</td>
+            <td style="border: 1px solid #ddd; padding: 8px; vertical-align: middle;">
+              <table style="width: 100%; border-collapse: collapse; border: none; background: transparent;">
+                <tr style="border: none; background: transparent;">
+                  <td style="border: none; padding: 0; vertical-align: middle;">
+                    <div style="font-weight: bold;">${desc}</div>
+                    <div style="font-size: 0.8rem; color: #555; margin-top: 4px;">${specDetails}</div>
+                  </td>
+                  ${finishedImgDirectUrl ? `
+                    <td style="border: none; padding: 0 0 0 10px; vertical-align: middle; text-align: right; width: 65px;">
+                      <img src="${finishedImgDirectUrl}" alt="Finished Product" style="width: 60px; height: 60px; border: 1px solid #ddd; border-radius: 4px; object-fit: contain; background: #fff;">
+                    </td>
+                  ` : ''}
+                </tr>
+              </table>
             </td>
-            <td style="text-align: center; border: 1px solid #ddd; padding: 8px;">1</td>
-            <td style="text-align: right; border: 1px solid #ddd; padding: 8px;">${price.toLocaleString('th-TH')}.00</td>
-            <td style="text-align: right; border: 1px solid #ddd; padding: 8px;">${price.toLocaleString('th-TH')}.00</td>
+            <td style="text-align: center; border: 1px solid #ddd; padding: 8px; vertical-align: middle;">1</td>
+            <td style="text-align: right; border: 1px solid #ddd; padding: 8px; vertical-align: middle;">${price.toLocaleString('th-TH')}.00</td>
+            <td style="text-align: right; border: 1px solid #ddd; padding: 8px; vertical-align: middle;">${price.toLocaleString('th-TH')}.00</td>
           </tr>
         `;
       });
@@ -817,9 +953,17 @@
       const total = subtotal + shipping - discount;
       
       // Load payment configurations
-      const payDetails = document.getElementById('payment-details').value.trim();
+      const payBank = document.getElementById('payment-bank').value.trim();
+      const payAccNum = document.getElementById('payment-account-number').value.trim();
+      const payAccName = document.getElementById('payment-account-name').value.trim();
       const payQrUrl = document.getElementById('payment-qr-url').value.trim();
       const payQrDirectUrl = getDirectImageUrl(payQrUrl);
+      
+      let payDetailsText = "";
+      if (payBank) payDetailsText += `ธนาคาร: ${payBank}\n`;
+      if (payAccNum) payDetailsText += `เลขที่บัญชี: ${payAccNum}\n`;
+      if (payAccName) payDetailsText += `ชื่อบัญชี: ${payAccName}`;
+      payDetailsText = payDetailsText.trim();
 
       // Dynamically resolve absolute path of Logo relative to current location
       const logoUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/')) + '/../Sale%20Foam/โลโก้ใหม่.png';
@@ -988,7 +1132,7 @@
               <tr>
                 <!-- Left: Payment details & QR Code -->
                 <td style="vertical-align: top; width: 58%; padding-right: 25px;">
-                  ${payDetails || payQrDirectUrl ? `
+                  ${payDetailsText || payQrDirectUrl ? `
                     <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 15px; background-color: #f9fafb;">
                       <div style="font-size: 0.88rem; font-weight: 800; color: #b45309; margin-bottom: 8px; border-bottom: 1.5px dashed #e5e7eb; padding-bottom: 4px;">💳 ช่องทางการชำระเงิน (Payment Info)</div>
                       <table style="width: 100%; border-collapse: collapse;">
@@ -999,7 +1143,7 @@
                             </td>
                           ` : ''}
                           <td style="vertical-align: top;">
-                            <div style="font-size: 0.85rem; color: #374151; white-space: pre-wrap; font-family: inherit; font-weight: 500; line-height: 1.45;">${payDetails || 'กรุณาสอบถามเลขบัญชีจากผู้ขาย'}</div>
+                            <div style="font-size: 0.85rem; color: #374151; white-space: pre-wrap; font-family: inherit; font-weight: 500; line-height: 1.45;">${payDetailsText || 'กรุณาสอบถามเลขบัญชีจากผู้ขาย'}</div>
                           </td>
                         </tr>
                       </table>

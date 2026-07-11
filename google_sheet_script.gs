@@ -96,7 +96,9 @@ function doGet(e) {
         lineNotifyEnabled: false,
         lineChannelAccessToken: "",
         lineRecipientId: "",
-        paymentDetails: "",
+        paymentBank: "",
+        paymentAccountNumber: "",
+        paymentAccountName: "",
         paymentQrUrl: ""
       };
       
@@ -106,7 +108,9 @@ function doGet(e) {
         if (key === 'lineNotifyEnabled') config.lineNotifyEnabled = (val === true || val === 'true');
         if (key === 'lineChannelAccessToken') config.lineChannelAccessToken = val;
         if (key === 'lineRecipientId') config.lineRecipientId = val;
-        if (key === 'paymentDetails') config.paymentDetails = val;
+        if (key === 'paymentBank') config.paymentBank = val;
+        if (key === 'paymentAccountNumber') config.paymentAccountNumber = val;
+        if (key === 'paymentAccountName') config.paymentAccountName = val;
         if (key === 'paymentQrUrl') config.paymentQrUrl = val;
       }
       return jsonResponse(config);
@@ -224,6 +228,48 @@ function doPost(e) {
       return jsonResponse({ success: false, error: 'Order not found' });
     }
     
+    if (action === 'updateFinishedImage') {
+      var orderSheet = sheet.getSheetByName('Orders') || createOrdersSheet(sheet);
+      var data = orderSheet.getDataRange().getValues();
+      var headers = data[0];
+      
+      var finishedImageIdx = headers.indexOf('finishedImage');
+      if (finishedImageIdx === -1) {
+        orderSheet.getRange(1, headers.length + 1).setValue('finishedImage');
+        headers.push('finishedImage');
+        finishedImageIdx = headers.length - 1;
+        // Reload values to match new columns dimensions
+        data = orderSheet.getDataRange().getValues();
+      }
+      
+      var targetId = params.id;
+      var fileUrl = "";
+      
+      if (params.image && params.image.data && params.image.data.indexOf('base64,') > -1) {
+        var folderName = "Logo Foam Uploads";
+        var folders = DriveApp.getFoldersByName(folderName);
+        var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
+        
+        var parts = params.image.data.split('base64,');
+        var contentType = parts[0].split(':')[1].split(';')[0];
+        var base64Data = parts[1];
+        
+        var decoded = Utilities.base64Decode(base64Data);
+        var blob = Utilities.newBlob(decoded, contentType, "finished_" + targetId);
+        var file = folder.createFile(blob);
+        file.setSharing(DriveApp.Access.ANYONE, DriveApp.Permission.VIEW);
+        fileUrl = file.getUrl();
+      }
+      
+      for (var i = 1; i < data.length; i++) {
+        if (Number(data[i][0]) === Number(targetId)) {
+          orderSheet.getRange(i + 1, finishedImageIdx + 1).setValue(fileUrl);
+          return jsonResponse({ success: true, finishedImage: fileUrl });
+        }
+      }
+      return jsonResponse({ success: false, error: 'Order not found' });
+    }
+
     if (action === 'deleteOrder') {
       var orderSheet = sheet.getSheetByName('Orders') || createOrdersSheet(sheet);
       var data = orderSheet.getDataRange().getValues();
@@ -269,13 +315,37 @@ function doPost(e) {
 
     if (action === 'saveConfig') {
       var configSheet = sheet.getSheetByName('Config') || createConfigSheet(sheet);
+      
+      var paymentQrUrl = params.paymentQrUrl || '';
+      
+      // Decode and save QR code image if uploaded
+      if (params.qrImage && params.qrImage.data && params.qrImage.data.indexOf('base64,') > -1) {
+        var folderName = "Logo Foam Uploads";
+        var folders = DriveApp.getFoldersByName(folderName);
+        var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
+        
+        var parts = params.qrImage.data.split('base64,');
+        var contentType = parts[0].split(':')[1].split(';')[0];
+        var base64Data = parts[1];
+        
+        var decoded = Utilities.base64Decode(base64Data);
+        var blob = Utilities.newBlob(decoded, contentType, "shop_payment_qr_code");
+        var file = folder.createFile(blob);
+        
+        // Public sharing
+        file.setSharing(DriveApp.Access.ANYONE, DriveApp.Permission.VIEW);
+        paymentQrUrl = file.getUrl();
+      }
+      
       configSheet.clearContents();
       configSheet.appendRow(['Key', 'Value']);
       configSheet.appendRow(['lineNotifyEnabled', params.lineNotifyEnabled]);
       configSheet.appendRow(['lineChannelAccessToken', params.lineChannelAccessToken]);
       configSheet.appendRow(['lineRecipientId', params.lineRecipientId]);
-      configSheet.appendRow(['paymentDetails', params.paymentDetails || '']);
-      configSheet.appendRow(['paymentQrUrl', params.paymentQrUrl || '']);
+      configSheet.appendRow(['paymentBank', params.paymentBank || '']);
+      configSheet.appendRow(['paymentAccountNumber', params.paymentAccountNumber || '']);
+      configSheet.appendRow(['paymentAccountName', params.paymentAccountName || '']);
+      configSheet.appendRow(['paymentQrUrl', paymentQrUrl]);
       
       // If it is a test notify request
       if (params.isTest) {
@@ -283,7 +353,7 @@ function doPost(e) {
         sendLinePushMessage(params.lineChannelAccessToken, params.lineRecipientId, [{ type: "text", text: testMessage }]);
       }
       
-      return jsonResponse({ success: true });
+      return jsonResponse({ success: true, paymentQrUrl: paymentQrUrl });
     }
     
     return jsonResponse({ success: false, error: 'Invalid action parameter in body' });

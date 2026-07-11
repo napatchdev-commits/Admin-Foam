@@ -974,9 +974,10 @@
             <table style="width: 100%;">
               <thead>
                 <tr>
-                  <th style="width: 45%;">รายการสินค้า</th>
-                  <th style="width: 30%;">ขนาด / สี</th>
-                  <th style="width: 25%; text-align: right;">ราคา (บาท)</th>
+                  <th style="width: 40%;">รายการสินค้า</th>
+                  <th style="width: 25%;">ขนาด / สี</th>
+                  <th style="width: 20%; text-align: center;">รูปงานเสร็จ</th>
+                  <th style="width: 15%; text-align: right;">ราคา (บาท)</th>
                 </tr>
               </thead>
               <tbody id="active-bill-items">
@@ -1082,17 +1083,35 @@
           <!-- PAYMENT DETAILS SECTION -->
           <div class="panel-title" style="font-size: 1.05rem; color: var(--accent-color); margin-bottom: 0.5rem;">💳 ช่องทางชำระเงิน (สำหรับแสดงผลบนบิล)</div>
           
-          <div class="config-group">
-            <label for="payment-details">ข้อมูลบัญชีชำระเงิน</label>
-            <textarea id="payment-details" class="filter-select" rows="3" placeholder="ระบุเลขบัญชีธนาคาร เช่น: ธ.กสิกรไทย 123-4-56789-0 นายสมชาย" style="width: 100%; box-sizing: border-box; font-family: inherit; resize: vertical; margin-bottom: 0.5rem;"></textarea>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div class="config-group" style="margin-bottom: 0;">
+              <label for="payment-bank">ชื่อธนาคาร / ช่องทาง</label>
+              <input type="text" id="payment-bank" class="filter-select" placeholder="เช่น ธ.กสิกรไทย, ธ.ไทยพาณิชย์">
+            </div>
+            <div class="config-group" style="margin-bottom: 0;">
+              <label for="payment-account-number">เลขที่บัญชี</label>
+              <input type="text" id="payment-account-number" class="filter-select" placeholder="เช่น 123-4-56789-0">
+            </div>
+          </div>
+          
+          <div class="config-group" style="margin-bottom: 1rem;">
+            <label for="payment-account-name">ชื่อเจ้าของบัญชี</label>
+            <input type="text" id="payment-account-name" class="filter-select" placeholder="เช่น นายสมชาย ใจดี">
           </div>
 
           <div class="config-group">
-            <label for="payment-qr-url">ลิงก์รูปภาพ QR Code ชำระเงิน (ลิงก์แชร์จาก Google Drive หรือลิงก์ทั่วไป)</label>
-            <input type="text" id="payment-qr-url" class="filter-select" placeholder="ใส่ลิงก์รูปภาพคิวอาร์โค้ดของคุณ...">
-            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem;">
-              *หมายเหตุ: สามารถนำภาพคิวอาร์โค้ดอัปโหลดขึ้น Google Drive แล้วนำลิงก์แชร์ทั่วไปมาป้อนลงในช่องนี้ได้เลยครับ
-            </p>
+            <label>รูปภาพ QR Code ชำระเงิน</label>
+            <div style="display: flex; gap: 1rem; align-items: center; margin-top: 0.3rem;">
+              <input type="file" id="payment-qr-file" accept="image/*" onchange="handleQrFileSelect(event)" style="display: none;">
+              <button type="button" class="btn btn-outline" onclick="document.getElementById('payment-qr-file').click()" style="padding: 0.4rem 0.8rem; font-size: 0.88rem; flex-shrink: 0;">📁 เลือกรูปคิวอาร์โค้ด</button>
+              <input type="text" id="payment-qr-url" class="filter-select" readonly placeholder="ยังไม่มีคิวอาร์โค้ดชำระเงิน" style="flex: 1; background: rgba(255,255,255,0.03); cursor: default;">
+            </div>
+            
+            <!-- QR Code Preview Frame -->
+            <div id="payment-qr-preview-container" style="margin-top: 0.8rem; display: none;">
+              <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.2rem;">ตัวอย่างคิวอาร์โค้ด:</div>
+              <img id="payment-qr-preview" style="max-width: 100px; max-height: 100px; border: 1.5px solid var(--border-color); border-radius: 8px; padding: 4px; background: #fff;">
+            </div>
           </div>
 
           <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
