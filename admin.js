@@ -198,10 +198,31 @@
       const specRequiredDateEl = document.getElementById('sheet-spec-required-date');
       if (specRequiredDateEl) specRequiredDateEl.innerText = formattedDate;
       document.getElementById('sheet-customer-name').innerText = selectedOrder.customerName;
+      // Parse bracketed metadata from notes
+      const notesVal = selectedOrder.notes || '';
+      const materialMatch = notesVal.match(/\[วัสดุ:\s*([^\]]+)\]/);
+      const material = materialMatch ? materialMatch[1] : 'รองโฟม'; 
+
+      const symbolMatch = notesVal.match(/\[สัญลักษณ์:\s*([^\]]+)\]/);
+      const symbol = symbolMatch ? symbolMatch[1] : '';
+
+      const cleanNotes = notesVal.replace(/\[วัสดุ:\s*[^\]]+\]\s*/g, '').replace(/\[สัญลักษณ์:\s*[^\]]+\]\s*/g, '').trim();
+
+      document.getElementById('sheet-material').innerText = material;
+      const symbolRow = document.getElementById('sheet-symbol-row');
+      if (symbolRow) {
+        if (symbol) {
+          document.getElementById('sheet-symbol').innerText = symbol;
+          symbolRow.style.display = 'flex';
+        } else {
+          symbolRow.style.display = 'none';
+        }
+      }
+
       if (selectedOrder.brideName === '[งานบวช]') {
         document.getElementById('sheet-group-title-1').innerText = "👤 ข้อมูลผู้สั่งและงานอุปสมบท";
         document.getElementById('sheet-groom-label').innerText = "ชื่อนาค:";
-        document.getElementById('sheet-groom-name').innerText = "นาค " + (selectedOrder.groomName || '-');
+        document.getElementById('sheet-groom-name').innerText = selectedOrder.groomName || '-';
         document.getElementById('sheet-bride-row').style.display = 'none';
       } else {
         document.getElementById('sheet-group-title-1').innerText = "👤 ข้อมูลผู้สั่งและงานแต่ง";
@@ -212,7 +233,7 @@
       }
       document.getElementById('sheet-size').innerText = selectedOrder.size;
       document.getElementById('sheet-color').innerText = selectedOrder.color;
-      document.getElementById('sheet-notes').innerText = selectedOrder.notes || '-';
+      document.getElementById('sheet-notes').innerText = cleanNotes || '-';
 
       // Load Images
       const imgContainer = document.getElementById('sheet-images-container');

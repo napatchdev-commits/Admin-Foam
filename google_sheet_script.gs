@@ -190,8 +190,12 @@ function doPost(e) {
       
       orderSheet.appendRow(rowData);
       
-      // Trigger LINE Push notification
-      triggerLineNotification(sheet, nextId, params, imageUrls);
+      // Trigger LINE Push notification safely
+      try {
+        triggerLineNotification(sheet, nextId, params, imageUrls);
+      } catch (lineErr) {
+        Logger.log("Error in triggerLineNotification inside doPost: " + lineErr.toString());
+      }
       
       return jsonResponse({ success: true, id: nextId });
     }
