@@ -270,6 +270,45 @@ function doPost(e) {
       return jsonResponse({ success: false, error: 'Order not found' });
     }
 
+    if (action === 'deleteFinishedImages') {
+      var orderSheet = sheet.getSheetByName('Orders') || createOrdersSheet(sheet);
+      var data = orderSheet.getDataRange().getValues();
+      var headers = data[0];
+      var finishedImageIdx = headers.indexOf('finishedImage');
+      
+      if (finishedImageIdx === -1) {
+        return jsonResponse({ success: true });
+      }
+      
+      var targetIds = params.ids;
+      if (!targetIds || !targetIds.length) {
+        return jsonResponse({ success: false, error: 'No IDs provided' });
+      }
+      
+      var count = 0;
+      for (var i = 1; i < data.length; i++) {
+        var rowId = Number(data[i][0]);
+        if (targetIds.indexOf(rowId) > -1) {
+          var fileUrl = data[i][finishedImageIdx];
+          if (fileUrl) {
+            try {
+              var match = fileUrl.match(/\/file\/d\/([^/]+)/) || fileUrl.match(/id=([^&]+)/);
+              if (match && match[1]) {
+                var fileId = match[1];
+                var file = DriveApp.getFileById(fileId);
+                file.setTrashed(true);
+              }
+            } catch (err) {
+              console.error('Error deleting file: ' + fileUrl, err);
+            }
+          }
+          orderSheet.getRange(i + 1, finishedImageIdx + 1).setValue('');
+          count++;
+        }
+      }
+      return jsonResponse({ success: true, clearedCount: count });
+    }
+
     if (action === 'deleteOrder') {
       var orderSheet = sheet.getSheetByName('Orders') || createOrdersSheet(sheet);
       var data = orderSheet.getDataRange().getValues();
@@ -343,7 +382,7 @@ function doPost(e) {
       configSheet.appendRow(['lineChannelAccessToken', params.lineChannelAccessToken]);
       configSheet.appendRow(['lineRecipientId', params.lineRecipientId]);
       configSheet.appendRow(['paymentBank', params.paymentBank || '']);
-      configSheet.appendRow(['paymentAccountNumber', params.paymentAccountNumber || '']);
+      configSheet.appendRow(['paymentAccountNumber', "'" + (params.paymentAccountNumber || '')]);
       configSheet.appendRow(['paymentAccountName', params.paymentAccountName || '']);
       configSheet.appendRow(['paymentQrUrl', paymentQrUrl]);
       

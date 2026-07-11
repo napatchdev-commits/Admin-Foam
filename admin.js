@@ -758,6 +758,10 @@
           ? `<img src="${imgDirectUrl}" style="width: 45px; height: 45px; object-fit: contain; border-radius: 4px; border: 1.5px solid var(--border-color); background: #fff; cursor: pointer; display: block; margin: 0 auto;" onclick="window.open('${imgDirectUrl}')">`
           : `<span style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-bottom: 2px;">ยังไม่มีรูป</span>`;
 
+        const btnHtml = imgDirectUrl
+          ? `<button class="btn btn-outline" onclick="deleteSingleFinishedImage(${item.id})" style="padding: 2px 6px; font-size: 0.65rem; margin-top: 3px; border-color: #ef4444; color: #ef4444; display: block; margin: 3px auto 0 auto;">🗑️ ลบรูป</button>`
+          : `<button class="btn btn-outline" onclick="document.getElementById('finished-file-${item.id}').click()" style="padding: 2px 6px; font-size: 0.65rem; margin-top: 3px; border-color: var(--accent-color); color: var(--accent-color); display: block; margin: 3px auto 0 auto;">📁 รูปเสร็จ</button>`;
+
         tr.innerHTML = `
           <td>
             <div style="font-weight: 600;">${desc}</div>
@@ -769,7 +773,7 @@
               ${imgHtml}
             </div>
             <input type="file" id="finished-file-${item.id}" accept="image/*" onchange="handleFinishedImageUpload(${item.id}, event)" style="display: none;">
-            <button class="btn btn-outline" onclick="document.getElementById('finished-file-${item.id}').click()" style="padding: 2px 6px; font-size: 0.65rem; margin-top: 3px; border-color: var(--accent-color); color: var(--accent-color);">📁 รูปเสร็จ</button>
+            ${btnHtml}
           </td>
           <td style="text-align: right;">
             <input type="number" id="bill-price-${item.id}" class="filter-select bill-item-price" value="${item.billPrice}" min="0" oninput="updateItemPrice(${item.id}, this.value)" style="width: 75px; text-align: right; padding: 0.25rem 0.4rem; font-size: 0.85rem; display: inline-block;">
@@ -839,6 +843,90 @@
     }
 
     window.handleFinishedImageUpload = handleFinishedImageUpload;
+
+    async function deleteSingleFinishedImage(orderId) {
+      if (!confirm('ยืนยันที่จะลบรูปผลงานเสร็จของรายการนี้เพื่อประหยัดพื้นที่เก็บข้อมูลคลาวด์?')) return;
+      
+      const previewDiv = document.getElementById(`finished-preview-container-${orderId}`);
+      previewDiv.innerHTML = '<span style="font-size: 0.62rem; color: #ef4444; display: block; text-align: center;">กำลังลบรูป...</span>';
+      
+      try {
+        const response = await fetch(GOOGLE_SHEET_URL, {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'deleteFinishedImages',
+            ids: [orderId]
+          }),
+          redirect: 'follow'
+        });
+        
+        if (response.ok) {
+          const resJson = await response.json();
+          if (resJson.success) {
+            // Update activeBillItems
+            const billItem = activeBillItems.find(item => item.id === orderId);
+            if (billItem) billItem.finishedImage = '';
+            
+            // Update allOrders
+            const orderItem = allOrders.find(o => o.id === orderId);
+            if (orderItem) orderItem.finishedImage = '';
+            
+            updateActiveBillTable();
+            alert('ลบรูปภาพผลงานชิ้นนี้ออกจากระบบสำเร็จ');
+          } else {
+            alert('ลบล้มเหลว: ' + resJson.error);
+            updateActiveBillTable();
+          }
+        } else {
+          alert('เชื่อมต่อเซิร์ฟเวอร์ผิดพลาด');
+          updateActiveBillTable();
+        }
+      } catch (err) {
+        console.error(err);
+        alert('เกิดข้อผิดพลาดในการส่งคำสั่งลบรูป');
+        updateActiveBillTable();
+      }
+    }
+    
+    window.deleteSingleFinishedImage = deleteSingleFinishedImage;
+
+    async function clearFinishedImagesFromServer(ids) {
+      if (!GOOGLE_SHEET_URL || GOOGLE_SHEET_URL.includes("YOUR_GOOGLE_SHEET_WEB_APP_URL")) {
+        return;
+      }
+      
+      try {
+        const response = await fetch(GOOGLE_SHEET_URL, {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'deleteFinishedImages',
+            ids: ids
+          }),
+          redirect: 'follow'
+        });
+        
+        if (response.ok) {
+          const resJson = await response.json();
+          if (resJson.success) {
+            // Update local state
+            ids.forEach(id => {
+              const billItem = activeBillItems.find(item => item.id === id);
+              if (billItem) billItem.finishedImage = '';
+              
+              const orderItem = allOrders.find(o => o.id === id);
+              if (orderItem) orderItem.finishedImage = '';
+            });
+            
+            updateActiveBillTable();
+            alert(`ลบรูปภาพชิ้นงานเสร็จทั้งหมดในบิลนี้ออกจาก Google Drive เรียบร้อยแล้ว (จำนวน ${resJson.clearedCount || ids.length} รูป)`);
+          }
+        }
+      } catch (err) {
+        console.error('Error deleting finished images:', err);
+      }
+    }
+    
+    window.clearFinishedImagesFromServer = clearFinishedImagesFromServer;
 
     function updateItemPrice(orderId, val) {
       const price = parseFloat(val) || 0;
@@ -966,7 +1054,7 @@
       payDetailsText = payDetailsText.trim();
 
       // Dynamically resolve absolute path of Logo relative to current location
-      const logoUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/')) + '/../Sale%20Foam/โลโก้ใหม่.png';
+      const logoUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/')) + '/โลโก้ใหม่.png';
 
       const printWindow = window.open('', '_blank');
       printWindow.document.write(`
@@ -1207,6 +1295,19 @@
       
       printWindow.setTimeout(() => {
         printWindow.print();
+        
+        // After printing starts, prompt to delete finished images to conserve cloud storage
+        const itemIdsWithImages = activeBillItems
+          .filter(item => item.finishedImage)
+          .map(item => item.id);
+
+        if (itemIdsWithImages.length > 0) {
+          setTimeout(() => {
+            if (confirm("พิมพ์ใบเสร็จ/ใบวางบิลเรียบร้อยแล้วหรือไม่?\nต้องการลบรูปภาพผลงานชิ้นงานเสร็จในบิลนี้ออกจากระบบคลาวด์ทันที เพื่อประหยัดพื้นที่เก็บข้อมูล (ไม่กินเนื้อที่กิ๊กกะไบต์) หรือไม่?")) {
+              clearFinishedImagesFromServer(itemIdsWithImages);
+            }
+          }, 1000);
+        }
       }, 500);
     }
 
