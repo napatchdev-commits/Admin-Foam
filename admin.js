@@ -458,6 +458,8 @@
           document.getElementById('line-notify-enabled').checked = config.lineNotifyEnabled;
           document.getElementById('line-token').value = config.lineChannelAccessToken || '';
           document.getElementById('line-recipient').value = config.lineRecipientId || '';
+          document.getElementById('payment-details').value = config.paymentDetails || '';
+          document.getElementById('payment-qr-url').value = config.paymentQrUrl || '';
           document.getElementById('google-sheet-sync-enabled').checked = true;
         }
       } catch (err) {
@@ -482,7 +484,9 @@
         action: 'saveConfig',
         lineNotifyEnabled: document.getElementById('line-notify-enabled').checked,
         lineChannelAccessToken: document.getElementById('line-token').value,
-        lineRecipientId: document.getElementById('line-recipient').value
+        lineRecipientId: document.getElementById('line-recipient').value,
+        paymentDetails: document.getElementById('payment-details').value,
+        paymentQrUrl: document.getElementById('payment-qr-url').value
       };
 
       try {
@@ -812,6 +816,14 @@
       const discount = parseFloat(document.getElementById('bill-discount').value) || 0;
       const total = subtotal + shipping - discount;
       
+      // Load payment configurations
+      const payDetails = document.getElementById('payment-details').value.trim();
+      const payQrUrl = document.getElementById('payment-qr-url').value.trim();
+      const payQrDirectUrl = getDirectImageUrl(payQrUrl);
+
+      // Dynamically resolve absolute path of Logo relative to current location
+      const logoUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/')) + '/../Sale%20Foam/โลโก้ใหม่.png';
+
       const printWindow = window.open('', '_blank');
       printWindow.document.write(`
         <html>
@@ -844,7 +856,7 @@
               vertical-align: top;
             }
             .shop-title {
-              font-size: 1.6rem;
+              font-size: 1.7rem;
               font-weight: 800;
               color: #b45309;
               margin: 0 0 5px 0;
@@ -882,10 +894,9 @@
               font-size: 0.95rem;
             }
             .totals-table {
-              width: 300px;
-              margin-left: auto;
+              width: 100%;
               border-collapse: collapse;
-              margin-bottom: 40px;
+              margin-bottom: 0;
             }
             .totals-table td {
               padding: 8px 12px;
@@ -900,13 +911,12 @@
             }
             .signature-section {
               width: 100%;
-              margin-top: 50px;
+              margin-top: 20px;
               border-collapse: collapse;
             }
             .signature-box {
               width: 45%;
               text-align: center;
-              border-top: 1px dashed #999;
               padding-top: 10px;
               font-size: 0.9rem;
             }
@@ -919,17 +929,21 @@
         <body>
           <div class="invoice-box">
             
+            <!-- Header Table with Logo & Shop Name -->
             <table class="header-table">
               <tr>
-                <td>
-                  <div class="shop-title">ร้าน Sale Foam สั่งตัดโลโก้โฟม</div>
+                <td style="width: 15%; padding-right: 15px; vertical-align: middle;">
+                  <img src="${logoUrl}" alt="Shop Logo" style="max-height: 80px; max-width: 120px; object-fit: contain; border-radius: 8px; border: 1.5px solid rgba(180, 83, 9, 0.2);">
+                </td>
+                <td style="width: 50%; vertical-align: middle;">
+                  <div class="shop-title">ร้าน ภัทรฟลาวเวอร์</div>
                   <div style="font-size: 0.88rem; color: #4b5563;">
                     ผู้ผลิตและจำหน่ายป้ายโฟมงานแต่งงาน งานบวช และงานอีเวนต์ต่างๆ<br>
                     📞 ติดต่อโทร: 085-530-4890<br>
                     💬 Line ID: napatch99
                   </div>
                 </td>
-                <td style="text-align: right;">
+                <td style="width: 35%; text-align: right; vertical-align: middle;">
                   <div class="invoice-title">ใบเสร็จ / ใบวางบิล</div>
                   <div style="font-size: 0.88rem; color: #4b5563;">
                     เลขที่บิล: <strong>${invoiceNo}</strong><br>
@@ -939,6 +953,7 @@
               </tr>
             </table>
 
+            <!-- Customer Metadata -->
             <table class="metadata-table">
               <tr>
                 <td style="width: 50%;">
@@ -952,6 +967,7 @@
               </tr>
             </table>
 
+            <!-- Item Table -->
             <table class="items-table">
               <thead>
                 <tr>
@@ -967,29 +983,62 @@
               </tbody>
             </table>
 
-            <table class="totals-table">
+            <!-- Payment & Totals Flex block -->
+            <table style="width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 25px;">
               <tr>
-                <td>รวมค่าสินค้า:</td>
-                <td style="text-align: right;">${subtotal.toLocaleString('th-TH')}.00</td>
-              </tr>
-              <tr>
-                <td>🚚 ค่าจัดส่ง:</td>
-                <td style="text-align: right;">${shipping.toLocaleString('th-TH')}.00</td>
-              </tr>
-              <tr>
-                <td>🏷️ ส่วนลด:</td>
-                <td style="text-align: right; color: red;">-${discount.toLocaleString('th-TH')}.00</td>
-              </tr>
-              <tr class="grand-total-row">
-                <td>ยอดสุทธิทั้งสิ้น:</td>
-                <td style="text-align: right;">${Math.max(0, total).toLocaleString('th-TH')}.00</td>
+                <!-- Left: Payment details & QR Code -->
+                <td style="vertical-align: top; width: 58%; padding-right: 25px;">
+                  ${payDetails || payQrDirectUrl ? `
+                    <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 15px; background-color: #f9fafb;">
+                      <div style="font-size: 0.88rem; font-weight: 800; color: #b45309; margin-bottom: 8px; border-bottom: 1.5px dashed #e5e7eb; padding-bottom: 4px;">💳 ช่องทางการชำระเงิน (Payment Info)</div>
+                      <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                          ${payQrDirectUrl ? `
+                            <td style="width: 90px; vertical-align: top; padding-right: 15px;">
+                              <img src="${payQrDirectUrl}" alt="Payment QR Code" style="width: 90px; height: 90px; border: 1px solid #ddd; border-radius: 6px; object-fit: contain; background: #fff;">
+                            </td>
+                          ` : ''}
+                          <td style="vertical-align: top;">
+                            <div style="font-size: 0.85rem; color: #374151; white-space: pre-wrap; font-family: inherit; font-weight: 500; line-height: 1.45;">${payDetails || 'กรุณาสอบถามเลขบัญชีจากผู้ขาย'}</div>
+                          </td>
+                        </tr>
+                      </table>
+                    </div>
+                  ` : ''}
+                </td>
+                <!-- Right: Totals Table -->
+                <td style="vertical-align: top; width: 42%;">
+                  <table class="totals-table">
+                    <tr>
+                      <td>รวมค่าสินค้า:</td>
+                      <td style="text-align: right; font-weight: 600;">${subtotal.toLocaleString('th-TH')}.00</td>
+                    </tr>
+                    <tr>
+                      <td>🚚 ค่าจัดส่ง:</td>
+                      <td style="text-align: right; font-weight: 600;">${shipping.toLocaleString('th-TH')}.00</td>
+                    </tr>
+                    <tr>
+                      <td>🏷️ ส่วนลด:</td>
+                      <td style="text-align: right; color: #ef4444; font-weight: 600;">-${discount.toLocaleString('th-TH')}.00</td>
+                    </tr>
+                    <tr class="grand-total-row">
+                      <td>ยอดสุทธิทั้งสิ้น:</td>
+                      <td style="text-align: right;">${Math.max(0, total).toLocaleString('th-TH')}.00</td>
+                    </tr>
+                  </table>
+                </td>
               </tr>
             </table>
 
-            <div style="text-align: center; margin: 40px 0; font-style: italic; color: #4b5563; font-size: 0.9rem;">
+            <!-- Thank you Message -->
+            <div style="text-align: center; margin: 30px 0 10px 0; font-style: italic; color: #4b5563; font-size: 0.88rem;">
               *ขอขอบคุณลูกค้าทุกท่านที่วางใจเลือกใช้บริการตัดป้ายโฟมกับร้านเราครับ*
             </div>
 
+            <!-- Single Dashed Divider Line -->
+            <hr style="border: 0; border-top: 1.5px dashed #d1d5db; margin: 25px 0 15px 0; width: 100%;">
+
+            <!-- Signature Section -->
             <table class="signature-section">
               <tr>
                 <td class="signature-box" style="width: 40%;">

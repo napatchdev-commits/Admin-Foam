@@ -1076,6 +1076,25 @@
             </p>
           </div>
 
+          <!-- Divider -->
+          <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.5rem 0;">
+
+          <!-- PAYMENT DETAILS SECTION -->
+          <div class="panel-title" style="font-size: 1.05rem; color: var(--accent-color); margin-bottom: 0.5rem;">💳 ช่องทางชำระเงิน (สำหรับแสดงผลบนบิล)</div>
+          
+          <div class="config-group">
+            <label for="payment-details">ข้อมูลบัญชีชำระเงิน</label>
+            <textarea id="payment-details" class="filter-select" rows="3" placeholder="ระบุเลขบัญชีธนาคาร เช่น: ธ.กสิกรไทย 123-4-56789-0 นายสมชาย" style="width: 100%; box-sizing: border-box; font-family: inherit; resize: vertical; margin-bottom: 0.5rem;"></textarea>
+          </div>
+
+          <div class="config-group">
+            <label for="payment-qr-url">ลิงก์รูปภาพ QR Code ชำระเงิน (ลิงก์แชร์จาก Google Drive หรือลิงก์ทั่วไป)</label>
+            <input type="text" id="payment-qr-url" class="filter-select" placeholder="ใส่ลิงก์รูปภาพคิวอาร์โค้ดของคุณ...">
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem;">
+              *หมายเหตุ: สามารถนำภาพคิวอาร์โค้ดอัปโหลดขึ้น Google Drive แล้วนำลิงก์แชร์ทั่วไปมาป้อนลงในช่องนี้ได้เลยครับ
+            </p>
+          </div>
+
           <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
             <button type="submit" class="btn btn-gold">บันทึกการตั้งค่าระบบ</button>
             <button type="button" class="btn btn-outline" onclick="testLineNotification()">ทดสอบแจ้งเตือน LINE</button>

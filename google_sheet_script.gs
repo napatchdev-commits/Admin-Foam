@@ -95,7 +95,9 @@ function doGet(e) {
       var config = {
         lineNotifyEnabled: false,
         lineChannelAccessToken: "",
-        lineRecipientId: ""
+        lineRecipientId: "",
+        paymentDetails: "",
+        paymentQrUrl: ""
       };
       
       for (var i = 1; i < data.length; i++) {
@@ -104,6 +106,8 @@ function doGet(e) {
         if (key === 'lineNotifyEnabled') config.lineNotifyEnabled = (val === true || val === 'true');
         if (key === 'lineChannelAccessToken') config.lineChannelAccessToken = val;
         if (key === 'lineRecipientId') config.lineRecipientId = val;
+        if (key === 'paymentDetails') config.paymentDetails = val;
+        if (key === 'paymentQrUrl') config.paymentQrUrl = val;
       }
       return jsonResponse(config);
     }
@@ -270,6 +274,8 @@ function doPost(e) {
       configSheet.appendRow(['lineNotifyEnabled', params.lineNotifyEnabled]);
       configSheet.appendRow(['lineChannelAccessToken', params.lineChannelAccessToken]);
       configSheet.appendRow(['lineRecipientId', params.lineRecipientId]);
+      configSheet.appendRow(['paymentDetails', params.paymentDetails || '']);
+      configSheet.appendRow(['paymentQrUrl', params.paymentQrUrl || '']);
       
       // If it is a test notify request
       if (params.isTest) {
