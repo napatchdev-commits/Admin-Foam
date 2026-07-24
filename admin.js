@@ -1040,10 +1040,12 @@
 
         function renderAndPrintInvoice(invoiceNo, customerName, displayDate, items, shipping, discount, total, payBank, payAccNum, payAccName, payQrUrl) {
       let itemRowsHtml = "";
+      let subtotal = 0;
       
       items.forEach((item, index) => {
         const finishedImgDirectUrl = item.finishedImage ? getDirectImageUrl(item.finishedImage) : '';
         const price = item.price || 0;
+        subtotal += price;
         
         itemRowsHtml += `
           <tr>
