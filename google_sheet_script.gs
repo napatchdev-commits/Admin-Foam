@@ -48,7 +48,7 @@ function doGet(e) {
           if (key === 'images') {
             val = val ? val.split(',').map(function(item) { return item.trim(); }) : [];
           }
-          if (val instanceof Date) {
+          if (val && Object.prototype.toString.call(val) === '[object Date]') {
             if (key === 'createdDate') {
               val = Utilities.formatDate(val, tz, "yyyy-MM-dd HH:mm:ss");
             } else {
@@ -90,7 +90,7 @@ function doGet(e) {
             if (key === 'images') {
               val = val ? val.split(',').map(function(item) { return item.trim(); }) : [];
             }
-            if (val instanceof Date) {
+            if (val && Object.prototype.toString.call(val) === '[object Date]') {
               if (key === 'createdDate') {
                 val = Utilities.formatDate(val, tz, "yyyy-MM-dd HH:mm:ss");
               } else {
