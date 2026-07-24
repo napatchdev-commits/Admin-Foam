@@ -131,6 +131,36 @@ function doGet(e) {
       }
       return jsonResponse(config);
     }
+    if (action === 'getBills') {
+      var billsSheet = sheet.getSheetByName('Bills') || createBillsSheet(sheet);
+      var data = billsSheet.getDataRange().getValues();
+      if (data.length <= 1) return jsonResponse([]);
+      
+      var headers = data[0];
+      var bills = [];
+      var tz = sheet.getSpreadsheetTimeZone();
+      for (var i = 1; i < data.length; i++) {
+        var row = data[i];
+        var bill = {};
+        for (var j = 0; j < headers.length; j++) {
+          var key = headers[j];
+          var val = row[j];
+          if (key === 'items') {
+            try {
+              val = JSON.parse(val);
+            } catch(err) {
+              val = [];
+            }
+          }
+          if (val && Object.prototype.toString.call(val) === '[object Date]') {
+            val = Utilities.formatDate(val, tz, "yyyy-MM-dd HH:mm:ss");
+          }
+          bill[key] = val;
+        }
+        bills.push(bill);
+      }
+      return jsonResponse(bills);
+    }
     
     return jsonResponse({ success: false, error: 'Invalid action parameter' });
   } catch (err) {
@@ -254,11 +284,11 @@ function doPost(e) {
         orderSheet.getRange(1, headers.length + 1).setValue('finishedImage');
         headers.push('finishedImage');
         finishedImageIdx = headers.length - 1;
-        // Reload values to match new columns dimensions
         data = orderSheet.getDataRange().getValues();
       }
       
       var targetId = params.id;
+      var pieceIdx = params.pieceIndex ? Number(params.pieceIndex) : 1;
       var fileUrl = "";
       
       if (params.image && params.image.data && params.image.data.indexOf('base64,') > -1) {
@@ -271,7 +301,7 @@ function doPost(e) {
         var base64Data = parts[1];
         
         var decoded = Utilities.base64Decode(base64Data);
-        var blob = Utilities.newBlob(decoded, contentType, "finished_" + targetId);
+        var blob = Utilities.newBlob(decoded, contentType, "finished_" + targetId + "_" + pieceIdx);
         var file = folder.createFile(blob);
         file.setSharing(DriveApp.Access.ANYONE, DriveApp.Permission.VIEW);
         fileUrl = file.getUrl();
@@ -279,8 +309,15 @@ function doPost(e) {
       
       for (var i = 1; i < data.length; i++) {
         if (Number(data[i][0]) === Number(targetId)) {
-          orderSheet.getRange(i + 1, finishedImageIdx + 1).setValue(fileUrl);
-          return jsonResponse({ success: true, finishedImage: fileUrl });
+          var currentVal = String(data[i][finishedImageIdx] || '');
+          var urls = currentVal ? currentVal.split(',') : [];
+          while (urls.length < pieceIdx) {
+            urls.push('');
+          }
+          urls[pieceIdx - 1] = fileUrl;
+          var combinedUrls = urls.join(',');
+          orderSheet.getRange(i + 1, finishedImageIdx + 1).setValue(combinedUrls);
+          return jsonResponse({ success: true, finishedImage: combinedUrls });
         }
       }
       return jsonResponse({ success: false, error: 'Order not found' });
@@ -302,27 +339,44 @@ function doPost(e) {
       }
       
       var count = 0;
-      for (var i = 1; i < data.length; i++) {
-        var rowId = Number(data[i][0]);
-        if (targetIds.indexOf(rowId) > -1) {
-          var fileUrl = data[i][finishedImageIdx];
-          if (fileUrl) {
-            try {
-              var match = fileUrl.match(/\/file\/d\/([^/]+)/) || fileUrl.match(/id=([^&]+)/);
-              if (match && match[1]) {
-                var fileId = match[1];
-                var file = DriveApp.getFileById(fileId);
-                file.setTrashed(true);
+      var lastUpdatedUrls = "";
+      for (var k = 0; k < targetIds.length; k++) {
+        var targetStr = String(targetIds[k]);
+        var parts = targetStr.split('_');
+        var orderId = Number(parts[0]);
+        var pieceIdx = parts[1] ? Number(parts[1]) : 1;
+        
+        for (var i = 1; i < data.length; i++) {
+          var rowId = Number(data[i][0]);
+          if (rowId === orderId) {
+            var currentVal = String(orderSheet.getRange(i + 1, finishedImageIdx + 1).getValue() || '');
+            var urls = currentVal ? currentVal.split(',') : [];
+            
+            if (urls[pieceIdx - 1]) {
+              var fileUrl = urls[pieceIdx - 1];
+              try {
+                var match = fileUrl.match(/\/file\/d\/([^/]+)/) || fileUrl.match(/id=([^&]+)/);
+                if (match && match[1]) {
+                  DriveApp.getFileById(match[1]).setTrashed(true);
+                }
+              } catch (err) {
+                console.error('Error deleting file: ' + fileUrl, err);
               }
-            } catch (err) {
-              console.error('Error deleting file: ' + fileUrl, err);
+              urls[pieceIdx - 1] = '';
+              count++;
             }
+            
+            while (urls.length > 0 && urls[urls.length - 1] === '') {
+              urls.pop();
+            }
+            
+            lastUpdatedUrls = urls.join(',');
+            orderSheet.getRange(i + 1, finishedImageIdx + 1).setValue(lastUpdatedUrls);
+            data[i][finishedImageIdx] = lastUpdatedUrls;
           }
-          orderSheet.getRange(i + 1, finishedImageIdx + 1).setValue('');
-          count++;
         }
       }
-      return jsonResponse({ success: true, clearedCount: count });
+      return jsonResponse({ success: true, clearedCount: count, finishedImage: lastUpdatedUrls });
     }
 
     if (action === 'deleteOrder') {
@@ -337,6 +391,39 @@ function doPost(e) {
         }
       }
       return jsonResponse({ success: false, error: 'Order not found' });
+    }
+    
+    if (action === 'saveBill') {
+      var billsSheet = sheet.getSheetByName('Bills') || createBillsSheet(sheet);
+      
+      billsSheet.appendRow([
+        params.billId,
+        Utilities.formatDate(new Date(), "GMT+7", "yyyy-MM-dd HH:mm:ss"),
+        params.customerName,
+        JSON.stringify(params.items),
+        params.shipping || 0,
+        params.discount || 0,
+        params.total || 0,
+        params.paymentBank || '',
+        params.paymentAccountNumber || '',
+        params.paymentAccountName || '',
+        params.paymentQrUrl || ''
+      ]);
+      return jsonResponse({ success: true });
+    }
+    
+    if (action === 'deleteBill') {
+      var billsSheet = sheet.getSheetByName('Bills') || createBillsSheet(sheet);
+      var data = billsSheet.getDataRange().getValues();
+      var targetBillId = params.billId;
+      
+      for (var i = 1; i < data.length; i++) {
+        if (String(data[i][0]) === String(targetBillId)) {
+          billsSheet.deleteRow(i + 1);
+          return jsonResponse({ success: true });
+        }
+      }
+      return jsonResponse({ success: false, error: 'Bill not found' });
     }
     
     if (action === 'addColor') {
@@ -649,4 +736,25 @@ function createConfigSheet(sheet) {
     configSheet.appendRow(['lineRecipientId', '']);
   }
   return configSheet;
+}
+
+function createBillsSheet(sheet) {
+  var billsSheet = sheet.getSheetByName('Bills');
+  if (!billsSheet) {
+    billsSheet = sheet.insertSheet('Bills');
+    billsSheet.appendRow([
+      'billId', 
+      'createdDate', 
+      'customerName', 
+      'items', 
+      'shipping', 
+      'discount', 
+      'total',
+      'paymentBank',
+      'paymentAccountNumber',
+      'paymentAccountName',
+      'paymentQrUrl'
+    ]);
+  }
+  return billsSheet;
 }

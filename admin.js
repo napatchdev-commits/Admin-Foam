@@ -710,21 +710,62 @@
 
     window.filterBillingOrders = filterBillingOrders;
 
+    function getFinishedImageForPiece(item) {
+      if (!item.finishedImage) return '';
+      const urls = String(item.finishedImage).split(',').map(s => s.trim());
+      return urls[item.pieceIndex - 1] || '';
+    }
+
+    window.getFinishedImageForPiece = getFinishedImageForPiece;
+
     function addOrderToBill(orderId) {
       const order = allOrders.find(o => o.id === orderId);
       if (!order) return;
       
-      if (activeBillItems.some(item => item.id === orderId)) return;
+      const sizeStr = order.size || '';
+      const qtyMatch = sizeStr.match(/จำนวน:\s*(\d+)/);
+      const qty = qtyMatch ? parseInt(qtyMatch[1]) : 1;
       
-      // Add default price field
-      activeBillItems.push({
-        ...order,
-        billPrice: 0
-      });
+      const cleanSize = sizeStr.replace(/\s*\(จำนวน:\s*\d+\s*ชิ้น\)/i, "");
+      const sizeParts = cleanSize.split(/ชิ้นที่\s*\d+:\s*/).map(s => s.trim().replace(/,$/, "").replace(/,$/, "")).filter(Boolean);
+      
+      const colorStr = order.color || '';
+      const colorParts = colorStr.split(/ชิ้นที่\s*\d+:\s*/).map(c => c.trim().replace(/,$/, "").replace(/,$/, "")).filter(Boolean);
+      
+      if (qty > 1) {
+        for (let i = 0; i < qty; i++) {
+          const pieceId = `${orderId}_${i + 1}`;
+          if (activeBillItems.some(item => item.billItemId === pieceId)) continue;
+          
+          const pieceSize = sizeParts[i] || sizeParts[0] || cleanSize || '-';
+          const pieceColor = colorParts[i] || colorParts[0] || colorStr || '-';
+          
+          activeBillItems.push({
+            ...order,
+            billItemId: pieceId,
+            pieceIndex: i + 1,
+            pieceSize: pieceSize,
+            pieceColor: pieceColor,
+            billPrice: 0
+          });
+        }
+      } else {
+        const pieceId = `${orderId}_1`;
+        if (activeBillItems.some(item => item.billItemId === pieceId)) return;
+        
+        activeBillItems.push({
+          ...order,
+          billItemId: pieceId,
+          pieceIndex: 1,
+          pieceSize: cleanSize || '-',
+          pieceColor: colorStr || '-',
+          billPrice: 0
+        });
+      }
       
       // Auto populate customer name if first item
       const custNameInput = document.getElementById('bill-customer-name');
-      if (activeBillItems.length === 1 && !custNameInput.value.trim()) {
+      if (activeBillItems.length > 0 && !custNameInput.value.trim()) {
         custNameInput.value = order.customerName;
       }
       
@@ -758,11 +799,11 @@
         
         let desc = "";
         if (item.brideName === '[งานบวช]') {
-          desc = `งานตัดโฟมงานบวช: นาค ${item.groomName}`;
+          desc = `งานตัดโฟมงานบวช: นาค ${item.groomName} (ชิ้นที่ ${item.pieceIndex})`;
         } else if (item.brideName && item.groomName) {
-          desc = `งานตัดโฟมแต่งงาน: ${item.groomName} & ${item.brideName}`;
+          desc = `งานตัดโฟมแต่งงาน: ${item.groomName} & ${item.brideName} (ชิ้นที่ ${item.pieceIndex})`;
         } else {
-          desc = `งานตัดป้ายโลโก้โฟม:ทั่วไป (#${item.id})`;
+          desc = `งานตัดป้ายโลโก้โฟม:ทั่วไป (#${item.id}) (ชิ้นที่ ${item.pieceIndex})`;
         }
         
         // Parse materials backing from notes
@@ -770,17 +811,18 @@
         const materialMatch = notesVal.match(/\[วัสดุ:\s*([^\]]+)\]/);
         const material = materialMatch ? materialMatch[1] : 'รองโฟม'; 
         
-        const specs = `${item.size || '-'} (${material}) / สี: ${item.color || '-'}`;
+        const specs = `${item.pieceSize} (${material}) / สี: ${item.pieceColor}`;
         
         // Finished Image Slot
-        const imgDirectUrl = item.finishedImage ? getDirectImageUrl(item.finishedImage) : '';
+        const pieceImgUrl = getFinishedImageForPiece(item);
+        const imgDirectUrl = pieceImgUrl ? getDirectImageUrl(pieceImgUrl) : '';
         const imgHtml = imgDirectUrl
           ? `<img src="${imgDirectUrl}" style="width: 45px; height: 45px; object-fit: contain; border-radius: 4px; border: 1.5px solid var(--border-color); background: #fff; cursor: pointer; display: block; margin: 0 auto;" onclick="window.open('${imgDirectUrl}')">`
           : `<span style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-bottom: 2px;">ยังไม่มีรูป</span>`;
 
         const btnHtml = imgDirectUrl
-          ? `<button class="btn btn-outline" onclick="deleteSingleFinishedImage(${item.id})" style="padding: 2px 6px; font-size: 0.65rem; margin-top: 3px; border-color: #ef4444; color: #ef4444; display: block; margin: 3px auto 0 auto;">🗑️ ลบรูป</button>`
-          : `<button class="btn btn-outline" onclick="document.getElementById('finished-file-${item.id}').click()" style="padding: 2px 6px; font-size: 0.65rem; margin-top: 3px; border-color: var(--accent-color); color: var(--accent-color); display: block; margin: 3px auto 0 auto;">📁 รูปเสร็จ</button>`;
+          ? `<button class="btn btn-outline" onclick="deleteSingleFinishedImage(${item.id}, ${item.pieceIndex})" style="padding: 2px 6px; font-size: 0.65rem; margin-top: 3px; border-color: #ef4444; color: #ef4444; display: block; margin: 3px auto 0 auto;">🗑️ ลบรูป</button>`
+          : `<button class="btn btn-outline" onclick="document.getElementById('finished-file-${item.id}-${item.pieceIndex}').click()" style="padding: 2px 6px; font-size: 0.65rem; margin-top: 3px; border-color: var(--accent-color); color: var(--accent-color); display: block; margin: 3px auto 0 auto;">📁 รูปเสร็จ</button>`;
 
         tr.innerHTML = `
           <td>
@@ -789,14 +831,14 @@
           </td>
           <td style="font-size: 0.8rem; color: var(--text-muted);">${specs}</td>
           <td style="text-align: center; vertical-align: middle;">
-            <div id="finished-preview-container-${item.id}" style="min-height: 45px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+            <div id="finished-preview-container-${item.id}-${item.pieceIndex}" style="min-height: 45px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
               ${imgHtml}
             </div>
-            <input type="file" id="finished-file-${item.id}" accept="image/*" onchange="handleFinishedImageUpload(${item.id}, event)" style="display: none;">
+            <input type="file" id="finished-file-${item.id}-${item.pieceIndex}" accept="image/*" onchange="handleFinishedImageUpload(${item.id}, ${item.pieceIndex}, event)" style="display: none;">
             ${btnHtml}
           </td>
           <td style="text-align: right;">
-            <input type="number" id="bill-price-${item.id}" class="filter-select bill-item-price" value="${item.billPrice}" min="0" oninput="updateItemPrice(${item.id}, this.value)" style="width: 75px; text-align: right; padding: 0.25rem 0.4rem; font-size: 0.85rem; display: inline-block;">
+            <input type="number" id="bill-price-${item.billItemId}" class="filter-select bill-item-price" value="${item.billPrice}" min="0" oninput="updateItemPrice('${item.billItemId}', this.value)" style="width: 75px; text-align: right; padding: 0.25rem 0.4rem; font-size: 0.85rem; display: inline-block;">
           </td>
         `;
         tbody.appendChild(tr);
@@ -805,11 +847,11 @@
       calculateBillingTotal();
     }
 
-    function handleFinishedImageUpload(orderId, event) {
+    function handleFinishedImageUpload(orderId, pieceIndex, event) {
       const file = event.target.files[0];
       if (!file) return;
 
-      const previewDiv = document.getElementById(`finished-preview-container-${orderId}`);
+      const previewDiv = document.getElementById(`finished-preview-container-${orderId}-${pieceIndex}`);
       previewDiv.innerHTML = '<span style="font-size: 0.62rem; color: var(--accent-color); display: block; text-align: center; line-height: 1.2;">กำลังอัปโหลดรูป...</span>';
 
       const reader = new FileReader();
@@ -817,6 +859,7 @@
         const payload = {
           action: 'updateFinishedImage',
           id: orderId,
+          pieceIndex: pieceIndex,
           image: {
             filename: file.name,
             data: e.target.result
@@ -833,15 +876,18 @@
           if (response.ok) {
             const resJson = await response.json();
             if (resJson.success && resJson.finishedImage) {
-              const updatedUrl = resJson.finishedImage;
+              const updatedUrlList = resJson.finishedImage;
               
               // Update in activeBillItems
-              const billItem = activeBillItems.find(item => item.id === orderId);
-              if (billItem) billItem.finishedImage = updatedUrl;
+              activeBillItems.forEach(item => {
+                if (item.id === orderId) {
+                  item.finishedImage = updatedUrlList;
+                }
+              });
               
               // Update in allOrders
               const orderItem = allOrders.find(o => o.id === orderId);
-              if (orderItem) orderItem.finishedImage = updatedUrl;
+              if (orderItem) orderItem.finishedImage = updatedUrlList;
 
               updateActiveBillTable();
               alert('อัปโหลดรูปชิ้นงานเสร็จแล้วเรียบร้อย!');
@@ -864,10 +910,10 @@
 
     window.handleFinishedImageUpload = handleFinishedImageUpload;
 
-    async function deleteSingleFinishedImage(orderId) {
+    async function deleteSingleFinishedImage(orderId, pieceIndex) {
       if (!confirm('ยืนยันที่จะลบรูปผลงานเสร็จของรายการนี้เพื่อประหยัดพื้นที่เก็บข้อมูลคลาวด์?')) return;
       
-      const previewDiv = document.getElementById(`finished-preview-container-${orderId}`);
+      const previewDiv = document.getElementById(`finished-preview-container-${orderId}-${pieceIndex}`);
       previewDiv.innerHTML = '<span style="font-size: 0.62rem; color: #ef4444; display: block; text-align: center;">กำลังลบรูป...</span>';
       
       try {
@@ -875,7 +921,7 @@
           method: 'POST',
           body: JSON.stringify({
             action: 'deleteFinishedImages',
-            ids: [orderId]
+            ids: [`${orderId}_${pieceIndex}`]
           }),
           redirect: 'follow'
         });
@@ -883,13 +929,18 @@
         if (response.ok) {
           const resJson = await response.json();
           if (resJson.success) {
+            const updatedUrlList = resJson.finishedImage || '';
+            
             // Update activeBillItems
-            const billItem = activeBillItems.find(item => item.id === orderId);
-            if (billItem) billItem.finishedImage = '';
+            activeBillItems.forEach(item => {
+              if (item.id === orderId) {
+                item.finishedImage = updatedUrlList;
+              }
+            });
             
             // Update allOrders
             const orderItem = allOrders.find(o => o.id === orderId);
-            if (orderItem) orderItem.finishedImage = '';
+            if (orderItem) orderItem.finishedImage = updatedUrlList;
             
             updateActiveBillTable();
             alert('ลบรูปภาพผลงานชิ้นนี้ออกจากระบบสำเร็จ');
@@ -928,17 +979,17 @@
         if (response.ok) {
           const resJson = await response.json();
           if (resJson.success) {
-            // Update local state
-            ids.forEach(id => {
-              const billItem = activeBillItems.find(item => item.id === id);
-              if (billItem) billItem.finishedImage = '';
-              
-              const orderItem = allOrders.find(o => o.id === id);
-              if (orderItem) orderItem.finishedImage = '';
+            // Reload all orders to sync everything
+            await fetchOrders();
+            // Clear finished image local state for matches
+            activeBillItems.forEach(item => {
+              const matchedOrder = allOrders.find(o => o.id === item.id);
+              if (matchedOrder) {
+                item.finishedImage = matchedOrder.finishedImage || '';
+              }
             });
-            
             updateActiveBillTable();
-            alert(`ลบรูปภาพชิ้นงานเสร็จทั้งหมดในบิลนี้ออกจาก Google Drive เรียบร้อยแล้ว (จำนวน ${resJson.clearedCount || ids.length} รูป)`);
+            alert(`ลบรูปภาพชิ้นงานเสร็จในระบบคลาวด์เรียบร้อยแล้วเพื่อประหยัดพื้นที่`);
           }
         }
       } catch (err) {
@@ -948,9 +999,9 @@
     
     window.clearFinishedImagesFromServer = clearFinishedImagesFromServer;
 
-    function updateItemPrice(orderId, val) {
+    function updateItemPrice(billItemId, val) {
       const price = parseFloat(val) || 0;
-      const item = activeBillItems.find(i => i.id === orderId);
+      const item = activeBillItems.find(i => i.billItemId === billItemId);
       if (item) {
         item.billPrice = price;
       }
@@ -987,100 +1038,52 @@
 
     window.clearActiveBill = clearActiveBill;
 
-    function printSummaryBill() {
-      if (activeBillItems.length === 0) {
-        alert("กรุณาเลือกรายการสินค้าเข้าบิลอย่างน้อย 1 ชิ้น");
-        return;
-      }
-      
-      const customerName = document.getElementById('bill-customer-name').value.trim() || "ลูกค้าสั่งตัดโลโก้โฟม";
-      
-      // Formatting date th
-      const billDateRaw = document.getElementById('bill-date').value;
-      let displayDate = billDateRaw;
-      if (billDateRaw) {
-        const parts = billDateRaw.split('-');
-        if (parts.length === 3) {
-          const monthsTh = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
-          displayDate = `${parseInt(parts[2])} ${monthsTh[parseInt(parts[1]) - 1]} ${parseInt(parts[0]) + 543}`;
-        }
-      }
-      
-      const invoiceNo = "INV-" + new Date().toISOString().slice(2,10).replace(/-/g,"") + "-" + Math.floor(100 + Math.random() * 900);
-      
+        function renderAndPrintInvoice(invoiceNo, customerName, displayDate, items, shipping, discount, total, payBank, payAccNum, payAccName, payQrUrl) {
       let itemRowsHtml = "";
-      let subtotal = 0;
       
-      activeBillItems.forEach((item, index) => {
-        let desc = "";
-        if (item.brideName === '[งานบวช]') {
-          desc = `งานตัดป้ายโฟมงานบวช: นาค ${item.groomName}`;
-        } else if (item.brideName && item.groomName) {
-          desc = `งานตัดป้ายโฟมงานแต่ง: ${item.groomName} & ${item.brideName}`;
-        } else {
-          desc = `งานตัดป้ายโลโก้โฟมสั่งทำพิเศษ (#${item.id})`;
-        }
-        
-        const notesVal = item.notes || '';
-        const materialMatch = notesVal.match(/\[วัสดุ:\s*([^\]]+)\]/);
-        const material = materialMatch ? materialMatch[1] : 'รองโฟม'; 
-        
-        const specDetails = `ขนาด: ${item.size || '-'} (${material})<br>สีชิ้นงาน: ${item.color || '-'}`;
-        const price = item.billPrice;
-        subtotal += price;
-        
+      items.forEach((item, index) => {
         const finishedImgDirectUrl = item.finishedImage ? getDirectImageUrl(item.finishedImage) : '';
+        const price = item.price || 0;
         
         itemRowsHtml += `
           <tr>
-            <td style="text-align: center; border: 1px solid #ddd; padding: 8px; vertical-align: middle;">${index + 1}</td>
+            <td style="text-align: center; border: 1px solid #ddd; padding: 8px; vertical-align: middle;">\${index + 1}</td>
             <td style="border: 1px solid #ddd; padding: 8px; vertical-align: middle;">
               <table style="width: 100%; border-collapse: collapse; border: none; background: transparent;">
                 <tr style="border: none; background: transparent;">
                   <td style="border: none; padding: 0; vertical-align: middle;">
-                    <div style="font-weight: bold;">${desc}</div>
-                    <div style="font-size: 0.8rem; color: #555; margin-top: 4px;">${specDetails}</div>
+                    <div style="font-weight: bold;">\${item.desc}</div>
+                    <div style="font-size: 0.8rem; color: #555; margin-top: 4px;">\${item.specs}</div>
                   </td>
-                  ${finishedImgDirectUrl ? `
+                  \${finishedImgDirectUrl ? `
                     <td style="border: none; padding: 0 0 0 10px; vertical-align: middle; text-align: right; width: 65px;">
-                      <img src="${finishedImgDirectUrl}" alt="Finished Product" style="width: 60px; height: 60px; border: 1px solid #ddd; border-radius: 4px; object-fit: contain; background: #fff;">
+                      <img src="\${finishedImgDirectUrl}" alt="Finished Product" style="width: 60px; height: 60px; border: 1px solid #ddd; border-radius: 4px; object-fit: contain; background: #fff;">
                     </td>
                   ` : ''}
                 </tr>
               </table>
             </td>
             <td style="text-align: center; border: 1px solid #ddd; padding: 8px; vertical-align: middle;">1</td>
-            <td style="text-align: right; border: 1px solid #ddd; padding: 8px; vertical-align: middle;">${price.toLocaleString('th-TH')}.00</td>
-            <td style="text-align: right; border: 1px solid #ddd; padding: 8px; vertical-align: middle;">${price.toLocaleString('th-TH')}.00</td>
+            <td style="text-align: right; border: 1px solid #ddd; padding: 8px; vertical-align: middle;">\${price.toLocaleString('th-TH')}.00</td>
+            <td style="text-align: right; border: 1px solid #ddd; padding: 8px; vertical-align: middle;">\${price.toLocaleString('th-TH')}.00</td>
           </tr>
         `;
       });
       
-      const shipping = parseFloat(document.getElementById('bill-shipping').value) || 0;
-      const discount = parseFloat(document.getElementById('bill-discount').value) || 0;
-      const total = subtotal + shipping - discount;
-      
-      // Load payment configurations
-      const payBank = document.getElementById('payment-bank').value.trim();
-      const payAccNum = document.getElementById('payment-account-number').value.trim();
-      const payAccName = document.getElementById('payment-account-name').value.trim();
-      const payQrUrl = document.getElementById('payment-qr-url').value.trim();
-      const payQrDirectUrl = getDirectImageUrl(payQrUrl);
-      
+      const payQrDirectUrl = payQrUrl ? getDirectImageUrl(payQrUrl) : '';
       let payDetailsText = "";
-      if (payBank) payDetailsText += `ธนาคาร: ${payBank}\n`;
-      if (payAccNum) payDetailsText += `เลขที่บัญชี: ${payAccNum}\n`;
-      if (payAccName) payDetailsText += `ชื่อบัญชี: ${payAccName}`;
+      if (payBank) payDetailsText += `ธนาคาร: \${payBank}\\n`;
+      if (payAccNum) payDetailsText += `เลขที่บัญชี: \${payAccNum}\\n`;
+      if (payAccName) payDetailsText += `ชื่อบัญชี: \${payAccName}`;
       payDetailsText = payDetailsText.trim();
-
-      // Dynamically resolve absolute path of Logo relative to current location
+      
       const logoUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/')) + '/โลโก้ใหม่.png';
-
+      
       const printWindow = window.open('', '_blank');
       printWindow.document.write(`
         <html>
         <head>
-          <title>ใบสรุปรายการสินค้า #${invoiceNo}</title>
+          <title>ใบสรุปรายการสินค้า #\${invoiceNo}</title>
           <link rel="preconnect" href="https://fonts.googleapis.com">
           <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
           <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700;800&family=Outfit:wght@400;700&display=swap" rel="stylesheet">
@@ -1102,180 +1105,224 @@
             .header-table {
               width: 100%;
               border-collapse: collapse;
-              margin-bottom: 20px;
+              margin-bottom: 25px;
             }
             .header-table td {
-              vertical-align: top;
+              padding: 0;
+              vertical-align: middle;
             }
-            .shop-title {
-              font-size: 1.7rem;
+            .shop-logo {
+              width: 75px;
+              height: 75px;
+              object-fit: contain;
+              border-radius: 8px;
+              margin-right: 15px;
+              background: #fff;
+              border: 1px solid #eaeaea;
+            }
+            .shop-name {
+              font-size: 1.6rem;
               font-weight: 800;
               color: #b45309;
-              margin: 0 0 5px 0;
+              margin: 0 0 3px 0;
+              letter-spacing: 0.5px;
             }
-            .invoice-title {
-              font-size: 1.8rem;
+            .shop-subtitle {
+              font-size: 0.82rem;
+              color: #6b7280;
+              margin: 0;
+            }
+            .title-badge {
+              background: #fef3c7;
+              color: #b45309;
               font-weight: 800;
-              text-align: right;
-              color: #333;
-              margin: 0 0 10px 0;
+              padding: 8px 18px;
+              font-size: 1.15rem;
+              border-radius: 6px;
+              text-align: center;
+              border: 1px solid #fde68a;
+              letter-spacing: 1px;
             }
             .metadata-table {
               width: 100%;
               border-collapse: collapse;
-              margin-bottom: 25px;
-              background-color: #f9fafb;
-              border-radius: 8px;
-              overflow: hidden;
+              margin-bottom: 20px;
             }
             .metadata-table td {
-              padding: 12px 15px;
-              border: 1px solid #e5e7eb;
-              font-size: 0.95rem;
+              padding: 5px 8px;
+              font-size: 0.9rem;
+              border: none;
             }
             .items-table {
               width: 100%;
               border-collapse: collapse;
-              margin-bottom: 30px;
+              margin-bottom: 25px;
             }
             .items-table th {
-              background-color: #f3f4f6;
-              border: 1px solid #d1d5db;
-              padding: 10px;
+              background-color: #f8fafc;
+              border: 1px solid #ddd;
+              padding: 10px 8px;
+              font-size: 0.9rem;
               font-weight: 700;
-              font-size: 0.95rem;
+              color: #334155;
             }
-            .totals-table {
+            .items-table td {
+              border: 1px solid #ddd;
+              padding: 10px 8px;
+              font-size: 0.88rem;
+            }
+            .totals-container {
               width: 100%;
               border-collapse: collapse;
-              margin-bottom: 0;
+              margin-top: 15px;
             }
-            .totals-table td {
-              padding: 8px 12px;
-              border: 1px solid #e5e7eb;
-              font-size: 0.95rem;
+            .totals-container td {
+              padding: 4px 8px;
+              font-size: 0.92rem;
             }
-            .grand-total-row {
-              background-color: #fef3c7;
+            .grand-total-row td {
+              font-size: 1.25rem;
               font-weight: 800;
-              font-size: 1.15rem !important;
               color: #b45309;
+              padding-top: 10px;
+            }
+            .payment-card {
+              border: 1px solid #fde68a;
+              border-radius: 8px;
+              background-color: #fffdf5;
+              padding: 12px;
+              display: flex;
+              align-items: center;
+              gap: 15px;
+              max-width: 420px;
+            }
+            .qr-code-img {
+              width: 90px;
+              height: 90px;
+              object-fit: contain;
+              border: 1px solid #fde68a;
+              border-radius: 6px;
+              background: #fff;
+            }
+            .payment-details {
+              font-size: 0.88rem;
+              color: #451a03;
+              line-height: 1.45;
             }
             .signature-section {
               width: 100%;
-              margin-top: 20px;
               border-collapse: collapse;
+              margin-top: 40px;
             }
             .signature-box {
-              width: 45%;
               text-align: center;
-              padding-top: 10px;
+              border-top: 1px dashed #cbd5e1;
+              padding-top: 15px;
               font-size: 0.9rem;
+              font-weight: 500;
             }
             @media print {
-              body { padding: 0; }
-              .invoice-box { padding: 0; }
+              body {
+                padding: 0;
+              }
+              .invoice-box {
+                padding: 0;
+                border: none;
+              }
+              .payment-card {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+              }
             }
           </style>
         </head>
         <body>
           <div class="invoice-box">
             
-            <!-- Header Table with Logo & Shop Name -->
+            <!-- Logo and Shop Name Header -->
             <table class="header-table">
               <tr>
-                <td style="width: 15%; padding-right: 15px; vertical-align: middle;">
-                  <img src="${logoUrl}" alt="Shop Logo" style="max-height: 80px; max-width: 120px; object-fit: contain; border-radius: 8px; border: 1.5px solid rgba(180, 83, 9, 0.2);">
-                </td>
-                <td style="width: 50%; vertical-align: middle;">
-                  <div class="shop-title">ร้าน ภัทรฟลาวเวอร์</div>
-                  <div style="font-size: 0.88rem; color: #4b5563;">
-                    ผู้ผลิตและจำหน่ายป้ายโฟมงานแต่งงาน งานบวช และงานอีเวนต์ต่างๆ<br>
-                    📞 ติดต่อโทร: 085-530-4890<br>
-                    💬 Line ID: napatch99
+                <td style="width: 60%; display: flex; align-items: center;">
+                  <img src="\${logoUrl}" class="shop-logo" alt="Phat Flowers Logo" onerror="this.style.display='none'">
+                  <div>
+                    <h1 class="shop-name">ภัทรฟลาวเวอร์</h1>
+                    <p class="shop-subtitle">บริการตัดตัวอักษรโฟม ป้ายโฟมแต่งงาน งานอีเวนต์ ทุกรูปแบบ</p>
                   </div>
                 </td>
-                <td style="width: 35%; text-align: right; vertical-align: middle;">
-                  <div class="invoice-title">ใบเสร็จ / ใบวางบิล</div>
-                  <div style="font-size: 0.88rem; color: #4b5563;">
-                    เลขที่บิล: <strong>${invoiceNo}</strong><br>
-                    วันที่ออกบิล: ${displayDate}
-                  </div>
+                <td style="width: 40%; text-align: right; vertical-align: top;">
+                  <div class="title-badge" style="display: inline-block;">ใบเสร็จเรียกเก็บเงิน</div>
                 </td>
               </tr>
             </table>
 
-            <!-- Customer Metadata -->
+            <!-- Customer Details Block -->
             <table class="metadata-table">
+              <tr style="background-color: #fafafa;">
+                <td style="width: 15%; font-weight: bold;">ชื่อลูกค้า:</td>
+                <td style="width: 45%;">\${customerName}</td>
+                <td style="width: 18%; font-weight: bold; text-align: right;">เลขที่เอกสาร:</td>
+                <td style="width: 22%; font-weight: bold; color: #b45309;">\${invoiceNo}</td>
+              </tr>
               <tr>
-                <td style="width: 50%;">
-                  <span style="color: #6b7280; font-size: 0.8rem; display: block; margin-bottom: 2px;">ลูกค้าผู้จ่ายเงิน (Bill To)</span>
-                  <strong>คุณ ${customerName}</strong>
-                </td>
-                <td style="width: 50%;">
-                  <span style="color: #6b7280; font-size: 0.8rem; display: block; margin-bottom: 2px;">ข้อมูลการจัดส่ง</span>
-                  จัดส่งทางไปรษณีย์ / ขนส่งด่วนพิเศษ (ตามที่อยู่ที่แจ้งไว้)
-                </td>
+                <td style="font-weight: bold;">ที่อยู่ / ติดต่อ:</td>
+                <td>-</td>
+                <td style="font-weight: bold; text-align: right;">วันที่ออกบิล:</td>
+                <td>\${displayDate}</td>
               </tr>
             </table>
 
-            <!-- Item Table -->
+            <!-- Invoice Items Grid -->
             <table class="items-table">
               <thead>
                 <tr>
                   <th style="width: 8%; text-align: center;">ลำดับ</th>
-                  <th style="width: 52%; text-align: left;">รายละเอียดสินค้า/รายการสั่งตัด</th>
+                  <th style="width: 62%;">รายการสินค้า / รายละเอียดงานสั่งตัด</th>
                   <th style="width: 10%; text-align: center;">จำนวน</th>
-                  <th style="width: 15%; text-align: right;">ราคาต่อชิ้น</th>
-                  <th style="width: 15%; text-align: right;">จำนวนเงิน (บาท)</th>
+                  <th style="width: 10%; text-align: right;">หน่วยละ</th>
+                  <th style="width: 10%; text-align: right;">รวมเงิน</th>
                 </tr>
               </thead>
               <tbody>
-                ${itemRowsHtml}
+                \${itemRowsHtml}
               </tbody>
             </table>
 
-            <!-- Payment & Totals Flex block -->
-            <table style="width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 25px;">
+            <!-- Totals & Payment Grid -->
+            <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
               <tr>
-                <!-- Left: Payment details & QR Code -->
-                <td style="vertical-align: top; width: 58%; padding-right: 25px;">
-                  ${payDetailsText || payQrDirectUrl ? `
-                    <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 15px; background-color: #f9fafb;">
-                      <div style="font-size: 0.88rem; font-weight: 800; color: #b45309; margin-bottom: 8px; border-bottom: 1.5px dashed #e5e7eb; padding-bottom: 4px;">💳 ช่องทางการชำระเงิน (Payment Info)</div>
-                      <table style="width: 100%; border-collapse: collapse;">
-                        <tr>
-                          ${payQrDirectUrl ? `
-                            <td style="width: 90px; vertical-align: top; padding-right: 15px;">
-                              <img src="${payQrDirectUrl}" alt="Payment QR Code" style="width: 90px; height: 90px; border: 1px solid #ddd; border-radius: 6px; object-fit: contain; background: #fff;">
-                            </td>
-                          ` : ''}
-                          <td style="vertical-align: top;">
-                            <div style="font-size: 0.85rem; color: #374151; white-space: pre-wrap; font-family: inherit; font-weight: 500; line-height: 1.45;">${payDetailsText || 'กรุณาสอบถามเลขบัญชีจากผู้ขาย'}</div>
-                          </td>
-                        </tr>
-                      </table>
+                <!-- Payment card side -->
+                <td style="width: 55%; vertical-align: top; padding: 0;">
+                  \${payQrDirectUrl || payDetailsText ? `
+                    <div style="font-size: 0.85rem; font-weight: bold; margin-bottom: 6px; color: #b45309;">ช่องทางการชำระเงิน:</div>
+                    <div class="payment-card">
+                      \${payQrDirectUrl ? `<img src="\${payQrDirectUrl}" class="qr-code-img" alt="QR Code Payment">` : ''}
+                      \${payDetailsText ? `
+                        <div class="payment-details">
+                          <pre style="font-family: inherit; margin: 0; white-space: pre-wrap; font-weight: 500;">\${payDetailsText}</pre>
+                        </div>
+                      ` : ''}
                     </div>
                   ` : ''}
                 </td>
-                <!-- Right: Totals Table -->
-                <td style="vertical-align: top; width: 42%;">
-                  <table class="totals-table">
+                
+                <!-- Totals calculation side -->
+                <td style="width: 45%; vertical-align: top; padding: 0;">
+                  <table class="totals-container" style="float: right; width: 90%;">
                     <tr>
                       <td>รวมค่าสินค้า:</td>
-                      <td style="text-align: right; font-weight: 600;">${subtotal.toLocaleString('th-TH')}.00</td>
+                      <td style="text-align: right; font-weight: 600;">\${subtotal.toLocaleString('th-TH')}.00</td>
                     </tr>
                     <tr>
                       <td>🚚 ค่าจัดส่ง:</td>
-                      <td style="text-align: right; font-weight: 600;">${shipping.toLocaleString('th-TH')}.00</td>
+                      <td style="text-align: right; font-weight: 600;">\${shipping.toLocaleString('th-TH')}.00</td>
                     </tr>
                     <tr>
                       <td>🏷️ ส่วนลด:</td>
-                      <td style="text-align: right; color: #ef4444; font-weight: 600;">-${discount.toLocaleString('th-TH')}.00</td>
+                      <td style="text-align: right; color: #ef4444; font-weight: 600;">-\\$\${discount.toLocaleString('th-TH')}.00</td>
                     </tr>
                     <tr class="grand-total-row">
                       <td>ยอดสุทธิทั้งสิ้น:</td>
-                      <td style="text-align: right;">${Math.max(0, total).toLocaleString('th-TH')}.00</td>
+                      <td style="text-align: right;">\${Math.max(0, total).toLocaleString('th-TH')}.00</td>
                     </tr>
                   </table>
                 </td>
@@ -1315,23 +1362,350 @@
       
       printWindow.setTimeout(() => {
         printWindow.print();
-        
-        // After printing starts, prompt to delete finished images to conserve cloud storage
-        const itemIdsWithImages = activeBillItems
-          .filter(item => item.finishedImage)
-          .map(item => item.id);
-
-        if (itemIdsWithImages.length > 0) {
-          setTimeout(() => {
-            if (confirm("พิมพ์ใบเสร็จ/ใบวางบิลเรียบร้อยแล้วหรือไม่?\nต้องการลบรูปภาพผลงานชิ้นงานเสร็จในบิลนี้ออกจากระบบคลาวด์ทันที เพื่อประหยัดพื้นที่เก็บข้อมูล (ไม่กินเนื้อที่กิ๊กกะไบต์) หรือไม่?")) {
-              clearFinishedImagesFromServer(itemIdsWithImages);
-            }
-          }, 1000);
-        }
       }, 500);
     }
 
+    function printSummaryBill() {
+      if (activeBillItems.length === 0) {
+        alert("กรุณาเลือกรายการสินค้าเข้าบิลอย่างน้อย 1 ชิ้น");
+        return;
+      }
+      
+      const customerName = document.getElementById('bill-customer-name').value.trim() || "ลูกค้าสั่งตัดโลโก้โฟม";
+      
+      const billDateRaw = document.getElementById('bill-date').value;
+      let displayDate = billDateRaw;
+      if (billDateRaw) {
+        const parts = billDateRaw.split('-');
+        if (parts.length === 3) {
+          const monthsTh = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+          displayDate = `\${parseInt(parts[2])} \${monthsTh[parseInt(parts[1]) - 1]} \${parseInt(parts[0]) + 543}`;
+        }
+      }
+      
+      const invoiceNo = "INV-" + new Date().toISOString().slice(2,10).replace(/-/g,"") + "-" + Math.floor(100 + Math.random() * 900);
+      
+      let subtotal = 0;
+      const items = activeBillItems.map(item => {
+        let desc = "";
+        if (item.brideName === '[งานบวช]') {
+          desc = `งานตัดป้ายโฟมงานบวช: นาค \${item.groomName} (ชิ้นที่ \${item.pieceIndex})`;
+        } else if (item.brideName && item.groomName) {
+          desc = `งานตัดป้ายโฟมงานแต่ง: \${item.groomName} & \${item.brideName} (ชิ้นที่ \${item.pieceIndex})`;
+        } else {
+          desc = `งานตัดป้ายโลโก้โฟมสั่งทำพิเศษ (#\${item.id}) (ชิ้นที่ \${item.pieceIndex})`;
+        }
+        
+        const notesVal = item.notes || '';
+        const materialMatch = notesVal.match(/\[วัสดุ:\\s*([^\\]]+)\]/);
+        const material = materialMatch ? materialMatch[1] : 'รองโฟม'; 
+        
+        const specDetails = `ขนาด: \${item.pieceSize || '-'} (\${material})<br>สีชิ้นงาน: \${item.pieceColor || '-'}`;
+        const price = item.billPrice;
+        subtotal += price;
+        
+        return {
+          desc: desc,
+          specs: specDetails,
+          price: price,
+          finishedImage: getFinishedImageForPiece(item)
+        };
+      });
+      
+      const shipping = parseFloat(document.getElementById('bill-shipping').value) || 0;
+      const discount = parseFloat(document.getElementById('bill-discount').value) || 0;
+      const total = subtotal + shipping - discount;
+      
+      const payBank = document.getElementById('payment-bank').value.trim();
+      const payAccNum = document.getElementById('payment-account-number').value.trim();
+      const payAccName = document.getElementById('payment-account-name').value.trim();
+      const payQrUrl = document.getElementById('payment-qr-url').value.trim();
+      
+      renderAndPrintInvoice(invoiceNo, customerName, displayDate, items, shipping, discount, total, payBank, payAccNum, payAccName, payQrUrl);
+      
+      const itemIdsWithImages = activeBillItems
+        .filter(item => getFinishedImageForPiece(item))
+        .map(item => item.billItemId);
+
+      if (itemIdsWithImages.length > 0) {
+        setTimeout(() => {
+          if (confirm("พิมพ์ใบเสร็จ/ใบวางบิลเรียบร้อยแล้วหรือไม่?\\nต้องการลบรูปภาพผลงานชิ้นงานเสร็จในบิลนี้ออกจากระบบคลาวด์ทันที เพื่อประหยัดพื้นที่เก็บข้อมูล (ไม่กินเนื้อที่กิ๊กกะไบต์) หรือไม่?")) {
+            clearFinishedImagesFromServer(itemIdsWithImages);
+          }
+        }, 1000);
+      }
+    }
+
     window.printSummaryBill = printSummaryBill;
+
+    // Billing Subtabs and Invoicing History
+    function switchBillingSubTab(subTab) {
+      const createTab = document.getElementById('billing-subtab-create');
+      const historyTab = document.getElementById('billing-subtab-history');
+      const btnCreate = document.getElementById('btn-billing-subtab-create');
+      const btnHistory = document.getElementById('btn-billing-subtab-history');
+      
+      if (subTab === 'create') {
+        createTab.style.display = 'flex';
+        historyTab.style.display = 'none';
+        btnCreate.className = 'btn btn-gold';
+        btnHistory.className = 'btn btn-outline';
+      } else {
+        createTab.style.display = 'none';
+        historyTab.style.display = 'block';
+        btnCreate.className = 'btn btn-outline';
+        btnHistory.className = 'btn btn-gold';
+        fetchBillsHistory();
+      }
+    }
+    
+    window.switchBillingSubTab = switchBillingSubTab;
+
+    async function saveActiveBillToSheet() {
+      if (activeBillItems.length === 0) {
+        alert("กรุณาเลือกรายการสินค้าเข้าบิลอย่างน้อย 1 ชิ้น");
+        return;
+      }
+      
+      const customerName = document.getElementById('bill-customer-name').value.trim();
+      if (!customerName) {
+        alert("กรุณากรอกชื่อลูกค้าบนหัวบิลก่อนบันทึก");
+        return;
+      }
+      
+      const billDateRaw = document.getElementById('bill-date').value;
+      let displayDate = billDateRaw || new Date().toISOString().split('T')[0];
+      
+      let formattedDisplayDate = displayDate;
+      const parts = displayDate.split('-');
+      if (parts.length === 3) {
+        const monthsTh = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+        formattedDisplayDate = `\${parseInt(parts[2])} \${monthsTh[parseInt(parts[1]) - 1]} \${parseInt(parts[0]) + 543}`;
+      }
+      
+      const invoiceNo = "INV-" + new Date().toISOString().slice(2,10).replace(/-/g,"") + "-" + Math.floor(100 + Math.random() * 900);
+      
+      let subtotal = 0;
+      const items = activeBillItems.map(item => {
+        let desc = "";
+        if (item.brideName === '[งานบวช]') {
+          desc = `งานตัดป้ายโฟมงานบวช: นาค \${item.groomName} (ชิ้นที่ \${item.pieceIndex})`;
+        } else if (item.brideName && item.groomName) {
+          desc = `งานตัดป้ายโฟมงานแต่ง: \${item.groomName} & \${item.brideName} (ชิ้นที่ \${item.pieceIndex})`;
+        } else {
+          desc = `งานตัดป้ายโลโก้โฟมสั่งทำพิเศษ (#\${item.id}) (ชิ้นที่ \${item.pieceIndex})`;
+        }
+        
+        const notesVal = item.notes || '';
+        const materialMatch = notesVal.match(/\[วัสดุ:\\s*([^\\]]+)\]/);
+        const material = materialMatch ? materialMatch[1] : 'รองโฟม';
+        
+        const specDetails = `ขนาด: \${item.pieceSize || '-'} (\${material})<br>สีชิ้นงาน: \${item.pieceColor || '-'}`;
+        const price = item.billPrice;
+        subtotal += price;
+        
+        return {
+          id: item.id,
+          billItemId: item.billItemId,
+          desc: desc,
+          specs: specDetails,
+          price: price,
+          finishedImage: getFinishedImageForPiece(item)
+        };
+      });
+      
+      const shipping = parseFloat(document.getElementById('bill-shipping').value) || 0;
+      const discount = parseFloat(document.getElementById('bill-discount').value) || 0;
+      const total = subtotal + shipping - discount;
+      
+      const payBank = document.getElementById('payment-bank').value.trim();
+      const payAccNum = document.getElementById('payment-account-number').value.trim();
+      const payAccName = document.getElementById('payment-account-name').value.trim();
+      const payQrUrl = document.getElementById('payment-qr-url').value.trim();
+      
+      const payload = {
+        action: 'saveBill',
+        billId: invoiceNo,
+        customerName: customerName,
+        items: items,
+        shipping: shipping,
+        discount: discount,
+        total: total,
+        paymentBank: payBank,
+        paymentAccountNumber: payAccNum,
+        paymentAccountName: payAccName,
+        paymentQrUrl: payQrUrl
+      };
+      
+      try {
+        const btn = document.querySelector('button[onclick="saveActiveBillToSheet()"]');
+        const origText = btn.innerText;
+        btn.disabled = true;
+        btn.innerText = "⏳ กำลังบันทึก...";
+        
+        const response = await fetch(GOOGLE_SHEET_URL, {
+          method: 'POST',
+          body: JSON.stringify(payload),
+          redirect: 'follow'
+        });
+        
+        btn.disabled = false;
+        btn.innerText = origText;
+        
+        if (response.ok) {
+          const res = await response.json();
+          if (res.success) {
+            alert(`บันทึกบิลเลขที่ \${invoiceNo} ลง Google Sheets สำเร็จ!`);
+            clearActiveBill();
+            switchBillingSubTab('history');
+          } else {
+            alert("บันทึกล้มเหลว: " + res.error);
+          }
+        } else {
+          alert("เชื่อมต่อเซิร์ฟเวอร์ผิดพลาด");
+        }
+      } catch(err) {
+        console.error(err);
+        alert("เกิดข้อผิดพลาดในการบันทึกบิล");
+      }
+    }
+    
+    window.saveActiveBillToSheet = saveActiveBillToSheet;
+
+    let allBills = [];
+    
+    async function fetchBillsHistory() {
+      const tbody = document.getElementById('billing-history-list');
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 3rem;">⏳ กำลังโหลดประวัติการออกบิล...</td></tr>';
+      
+      if (!GOOGLE_SHEET_URL || GOOGLE_SHEET_URL.includes("YOUR_GOOGLE_SHEET_WEB_APP_URL")) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #ef4444; padding: 3rem;">⚠️ กรุณาตั้งค่า Google Sheets URL ก่อน</td></tr>';
+        return;
+      }
+      
+      try {
+        const response = await fetch(GOOGLE_SHEET_URL + '?action=getBills', { redirect: 'follow' });
+        if (response.ok) {
+          allBills = await response.json();
+          renderBillsHistoryTable();
+        } else {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #ef4444; padding: 3rem;">❌ ไม่สามารถดึงประวัติบิลได้</td></tr>';
+        }
+      } catch (err) {
+        console.error(err);
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #ef4444; padding: 3rem;">❌ เกิดข้อผิดพลาดในการเชื่อมต่อข้อมูล</td></tr>';
+      }
+    }
+    
+    window.fetchBillsHistory = fetchBillsHistory;
+    
+    function renderBillsHistoryTable() {
+      const tbody = document.getElementById('billing-history-list');
+      tbody.innerHTML = '';
+      
+      if (allBills.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 3rem;">ไม่มีประวัติการออกบิลในระบบ</td></tr>';
+        return;
+      }
+      
+      const sortedBills = [...allBills].reverse();
+      
+      sortedBills.forEach(bill => {
+        const tr = document.createElement('tr');
+        
+        let displayDate = bill.createdDate || '-';
+        if (displayDate && displayDate !== '-' && displayDate.includes('-')) {
+          const parts = displayDate.split(' ');
+          const datePart = parts[0];
+          const timePart = parts[1] || '';
+          const dParts = datePart.split('-');
+          if (dParts.length === 3) {
+            displayDate = `\${dParts[2]}/\${dParts[1]}/\${parseInt(dParts[0]) + 543}\${timePart ? ' ' + timePart : ''}`;
+          }
+        }
+        
+        const totalFormatted = (bill.total || 0).toLocaleString('th-TH');
+        
+        tr.innerHTML = `
+          <td style="font-weight: 600;">\${bill.billId}</td>
+          <td style="font-size: 0.85rem; color: var(--text-muted);">\${displayDate}</td>
+          <td>\${bill.customerName || '-'}</td>
+          <td style="text-align: right; font-weight: 600; color: var(--accent-color);">\${totalFormatted} บาท</td>
+          <td style="text-align: center;">
+            <button class="btn btn-gold" onclick="printHistoricalBill('\${bill.billId}')" style="padding: 0.25rem 0.6rem; font-size: 0.75rem; margin-right: 5px;">🖨️ พิมพ์บิล</button>
+            <button class="btn btn-outline" onclick="deleteBillHistory('\${bill.billId}')" style="padding: 0.25rem 0.6rem; font-size: 0.75rem; border-color: #ef4444; color: #ef4444;">🗑️ ลบ</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+    
+    async function deleteBillHistory(billId) {
+      if (!confirm(`ยืนยันที่จะลบประวัติบิลเลขที่ \${billId} ออกจาก Google Sheets ใช่หรือไม่?`)) return;
+      
+      try {
+        const response = await fetch(GOOGLE_SHEET_URL, {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'deleteBill',
+            billId: billId
+          }),
+          redirect: 'follow'
+        });
+        
+        if (response.ok) {
+          const res = await response.json();
+          if (res.success) {
+            alert(`ลบประวัติบิลเลขที่ \${billId} สำเร็จ!`);
+            fetchBillsHistory();
+          } else {
+            alert("ลบล้มเหลว: " + res.error);
+          }
+        } else {
+          alert("เชื่อมต่อเซิร์ฟเวอร์ผิดพลาด");
+        }
+      } catch (err) {
+        console.error(err);
+        alert("เกิดข้อผิดพลาดในการลบประวัติบิล");
+      }
+    }
+    
+    window.deleteBillHistory = deleteBillHistory;
+
+    function printHistoricalBill(billId) {
+      const bill = allBills.find(b => b.billId === billId);
+      if (!bill) {
+        alert("ไม่พบข้อมูลบิลที่เลือก");
+        return;
+      }
+      
+      const customerName = bill.customerName || "ลูกค้าสั่งตัดโลโก้โฟม";
+      let displayDate = bill.createdDate || '-';
+      if (displayDate && displayDate !== '-' && displayDate.includes('T')) {
+        displayDate = displayDate.split('T')[0];
+      }
+      if (displayDate && displayDate.includes('-')) {
+        const parts = displayDate.split(' ')[0].split('-');
+        if (parts.length === 3) {
+          const monthsTh = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+          displayDate = `\${parseInt(parts[2])} \${monthsTh[parseInt(parts[1]) - 1]} \${parseInt(parts[0]) + 543}`;
+        }
+      }
+      
+      const items = Array.isArray(bill.items) ? bill.items : [];
+      const shipping = parseFloat(bill.shipping) || 0;
+      const discount = parseFloat(bill.discount) || 0;
+      const total = parseFloat(bill.total) || 0;
+      
+      const payBank = bill.paymentBank || '';
+      const payAccNum = bill.paymentAccountNumber || '';
+      const payAccName = bill.paymentAccountName || '';
+      const payQrUrl = bill.paymentQrUrl || '';
+      
+      renderAndPrintInvoice(bill.billId, customerName, displayDate, items, shipping, discount, total, payBank, payAccNum, payAccName, payQrUrl);
+    }
+    
+    window.printHistoricalBill = printHistoricalBill;
 
     // Init
     window.addEventListener('DOMContentLoaded', () => {
