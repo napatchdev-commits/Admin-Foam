@@ -196,13 +196,23 @@
       document.getElementById('sheet-order-id').innerText = `#${selectedOrder.id}`;
       
       let createdDateDisplay = selectedOrder.createdDate || '-';
-      if (createdDateDisplay && createdDateDisplay !== '-' && createdDateDisplay.includes('-')) {
-        const parts = createdDateDisplay.split(' ');
+      if (createdDateDisplay && createdDateDisplay !== '-' && (createdDateDisplay.includes('-') || createdDateDisplay.includes('/'))) {
+        let normalized = createdDateDisplay.replace('T', ' ');
+        if (normalized.includes('.')) {
+          normalized = normalized.split('.')[0];
+        } else if (normalized.endsWith('Z')) {
+          normalized = normalized.substring(0, normalized.length - 1);
+        }
+        const parts = normalized.split(' ');
         const datePart = parts[0];
         const timePart = parts[1] || '';
-        const dParts = datePart.split('-');
+        const dParts = datePart.includes('-') ? datePart.split('-') : datePart.split('/');
         if (dParts.length === 3) {
-          createdDateDisplay = `${dParts[2]}/${dParts[1]}/${parseInt(dParts[0]) + 543}${timePart ? ' ' + timePart : ''}`;
+          if (parseInt(dParts[0]) > 2500 || parseInt(dParts[2]) > 2500) {
+            createdDateDisplay = normalized;
+          } else {
+            createdDateDisplay = `${dParts[2]}/${dParts[1]}/${parseInt(dParts[0]) + 543}${timePart ? ' ' + timePart : ''}`;
+          }
         }
       }
       document.getElementById('sheet-created-date').innerText = createdDateDisplay;
