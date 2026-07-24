@@ -37,6 +37,7 @@ function doGet(e) {
       var data = orderSheet.getDataRange().getValues();
       var headers = data[0];
       var orders = [];
+      var tz = sheet.getSpreadsheetTimeZone();
       for (var i = 1; i < data.length; i++) {
         var row = data[i];
         var order = {};
@@ -47,13 +48,20 @@ function doGet(e) {
           if (key === 'images') {
             val = val ? val.split(',').map(function(item) { return item.trim(); }) : [];
           }
+          if (val instanceof Date) {
+            if (key === 'createdDate') {
+              val = Utilities.formatDate(val, tz, "yyyy-MM-dd HH:mm:ss");
+            } else {
+              val = Utilities.formatDate(val, tz, "yyyy-MM-dd");
+            }
+          }
           order[key] = val;
         }
         orders.push(order);
       }
       return jsonResponse(orders);
     }
-
+    
     if (action === 'getCustomerOrders') {
       var customerName = e.parameter.customerName;
       if (!customerName) {
@@ -69,6 +77,7 @@ function doGet(e) {
       if (customerNameIdx === -1) return jsonResponse([]);
       
       var orders = [];
+      var tz = sheet.getSpreadsheetTimeZone();
       for (var i = 1; i < data.length; i++) {
         var row = data[i];
         var rowCustName = String(row[customerNameIdx]).trim().toLowerCase();
@@ -80,6 +89,13 @@ function doGet(e) {
             if (key === 'id') val = Number(val);
             if (key === 'images') {
               val = val ? val.split(',').map(function(item) { return item.trim(); }) : [];
+            }
+            if (val instanceof Date) {
+              if (key === 'createdDate') {
+                val = Utilities.formatDate(val, tz, "yyyy-MM-dd HH:mm:ss");
+              } else {
+                val = Utilities.formatDate(val, tz, "yyyy-MM-dd");
+              }
             }
             order[key] = val;
           }

@@ -178,9 +178,7 @@
         }
         const parts = dateString.split('-');
         if (parts.length !== 3) return dateString;
-        const d = new Date(parts[0], parts[1] - 1, parts[2]);
-        if (isNaN(d.getTime())) return dateString;
-        return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
+        return `${parts[2]}/${parts[1]}/${parseInt(parts[0]) + 543}`;
       } catch (e) {
         return dateString;
       }
@@ -196,7 +194,19 @@
 
       // Map details to printable Job Sheet
       document.getElementById('sheet-order-id').innerText = `#${selectedOrder.id}`;
-      document.getElementById('sheet-created-date').innerText = selectedOrder.createdDate || '-';
+      
+      let createdDateDisplay = selectedOrder.createdDate || '-';
+      if (createdDateDisplay && createdDateDisplay !== '-' && createdDateDisplay.includes('-')) {
+        const parts = createdDateDisplay.split(' ');
+        const datePart = parts[0];
+        const timePart = parts[1] || '';
+        const dParts = datePart.split('-');
+        if (dParts.length === 3) {
+          createdDateDisplay = `${dParts[2]}/${dParts[1]}/${parseInt(dParts[0]) + 543}${timePart ? ' ' + timePart : ''}`;
+        }
+      }
+      document.getElementById('sheet-created-date').innerText = createdDateDisplay;
+      
       const formattedDate = formatThaiDate(selectedOrder.requiredDate);
       document.getElementById('sheet-required-date').innerText = formattedDate;
       const specRequiredDateEl = document.getElementById('sheet-spec-required-date');
