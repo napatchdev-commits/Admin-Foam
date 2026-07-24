@@ -1047,34 +1047,36 @@
         
         itemRowsHtml += `
           <tr>
-            <td style="text-align: center; border: 1px solid #ddd; padding: 8px; vertical-align: middle;">\${index + 1}</td>
+            <td style="text-align: center; border: 1px solid #ddd; padding: 8px; vertical-align: middle;">${index + 1}</td>
             <td style="border: 1px solid #ddd; padding: 8px; vertical-align: middle;">
               <table style="width: 100%; border-collapse: collapse; border: none; background: transparent;">
                 <tr style="border: none; background: transparent;">
                   <td style="border: none; padding: 0; vertical-align: middle;">
-                    <div style="font-weight: bold;">\${item.desc}</div>
-                    <div style="font-size: 0.8rem; color: #555; margin-top: 4px;">\${item.specs}</div>
+                    <div style="font-weight: bold;">${item.desc}</div>
+                    <div style="font-size: 0.8rem; color: #555; margin-top: 4px;">${item.specs}</div>
                   </td>
-                  \${finishedImgDirectUrl ? `
+                  ${finishedImgDirectUrl ? `
                     <td style="border: none; padding: 0 0 0 10px; vertical-align: middle; text-align: right; width: 65px;">
-                      <img src="\${finishedImgDirectUrl}" alt="Finished Product" style="width: 60px; height: 60px; border: 1px solid #ddd; border-radius: 4px; object-fit: contain; background: #fff;">
+                      <img src="${finishedImgDirectUrl}" alt="Finished Product" style="width: 60px; height: 60px; border: 1px solid #ddd; border-radius: 4px; object-fit: contain; background: #fff;">
                     </td>
                   ` : ''}
                 </tr>
               </table>
             </td>
             <td style="text-align: center; border: 1px solid #ddd; padding: 8px; vertical-align: middle;">1</td>
-            <td style="text-align: right; border: 1px solid #ddd; padding: 8px; vertical-align: middle;">\${price.toLocaleString('th-TH')}.00</td>
-            <td style="text-align: right; border: 1px solid #ddd; padding: 8px; vertical-align: middle;">\${price.toLocaleString('th-TH')}.00</td>
+            <td style="text-align: right; border: 1px solid #ddd; padding: 8px; vertical-align: middle;">${price.toLocaleString('th-TH')}.00</td>
+            <td style="text-align: right; border: 1px solid #ddd; padding: 8px; vertical-align: middle;">${price.toLocaleString('th-TH')}.00</td>
           </tr>
         `;
       });
       
       const payQrDirectUrl = payQrUrl ? getDirectImageUrl(payQrUrl) : '';
       let payDetailsText = "";
-      if (payBank) payDetailsText += `ธนาคาร: \${payBank}\\n`;
-      if (payAccNum) payDetailsText += `เลขที่บัญชี: \${payAccNum}\\n`;
-      if (payAccName) payDetailsText += `ชื่อบัญชี: \${payAccName}`;
+      if (payBank) payDetailsText += `ธนาคาร: ${payBank}
+`;
+      if (payAccNum) payDetailsText += `เลขที่บัญชี: ${payAccNum}
+`;
+      if (payAccName) payDetailsText += `ชื่อบัญชี: ${payAccName}`;
       payDetailsText = payDetailsText.trim();
       
       const logoUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/')) + '/โลโก้ใหม่.png';
@@ -1083,7 +1085,7 @@
       printWindow.document.write(`
         <html>
         <head>
-          <title>ใบสรุปรายการสินค้า #\${invoiceNo}</title>
+          <title>ใบสรุปรายการสินค้า #${invoiceNo}</title>
           <link rel="preconnect" href="https://fonts.googleapis.com">
           <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
           <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700;800&family=Outfit:wght@400;700&display=swap" rel="stylesheet">
@@ -1243,7 +1245,7 @@
             <table class="header-table">
               <tr>
                 <td style="width: 60%; display: flex; align-items: center;">
-                  <img src="\${logoUrl}" class="shop-logo" alt="Phat Flowers Logo" onerror="this.style.display='none'">
+                  <img src="${logoUrl}" class="shop-logo" alt="Phat Flowers Logo" onerror="this.style.display='none'">
                   <div>
                     <h1 class="shop-name">ภัทรฟลาวเวอร์</h1>
                     <p class="shop-subtitle">บริการตัดตัวอักษรโฟม ป้ายโฟมแต่งงาน งานอีเวนต์ ทุกรูปแบบ</p>
@@ -1259,15 +1261,15 @@
             <table class="metadata-table">
               <tr style="background-color: #fafafa;">
                 <td style="width: 15%; font-weight: bold;">ชื่อลูกค้า:</td>
-                <td style="width: 45%;">\${customerName}</td>
+                <td style="width: 45%;">${customerName}</td>
                 <td style="width: 18%; font-weight: bold; text-align: right;">เลขที่เอกสาร:</td>
-                <td style="width: 22%; font-weight: bold; color: #b45309;">\${invoiceNo}</td>
+                <td style="width: 22%; font-weight: bold; color: #b45309;">${invoiceNo}</td>
               </tr>
               <tr>
                 <td style="font-weight: bold;">ที่อยู่ / ติดต่อ:</td>
                 <td>-</td>
                 <td style="font-weight: bold; text-align: right;">วันที่ออกบิล:</td>
-                <td>\${displayDate}</td>
+                <td>${displayDate}</td>
               </tr>
             </table>
 
@@ -1283,7 +1285,7 @@
                 </tr>
               </thead>
               <tbody>
-                \${itemRowsHtml}
+                ${itemRowsHtml}
               </tbody>
             </table>
 
@@ -1292,13 +1294,13 @@
               <tr>
                 <!-- Payment card side -->
                 <td style="width: 55%; vertical-align: top; padding: 0;">
-                  \${payQrDirectUrl || payDetailsText ? `
+                  ${payQrDirectUrl || payDetailsText ? `
                     <div style="font-size: 0.85rem; font-weight: bold; margin-bottom: 6px; color: #b45309;">ช่องทางการชำระเงิน:</div>
                     <div class="payment-card">
-                      \${payQrDirectUrl ? `<img src="\${payQrDirectUrl}" class="qr-code-img" alt="QR Code Payment">` : ''}
-                      \${payDetailsText ? `
+                      ${payQrDirectUrl ? `<img src="${payQrDirectUrl}" class="qr-code-img" alt="QR Code Payment">` : ''}
+                      ${payDetailsText ? `
                         <div class="payment-details">
-                          <pre style="font-family: inherit; margin: 0; white-space: pre-wrap; font-weight: 500;">\${payDetailsText}</pre>
+                          <pre style="font-family: inherit; margin: 0; white-space: pre-wrap; font-weight: 500;">${payDetailsText}</pre>
                         </div>
                       ` : ''}
                     </div>
@@ -1310,19 +1312,19 @@
                   <table class="totals-container" style="float: right; width: 90%;">
                     <tr>
                       <td>รวมค่าสินค้า:</td>
-                      <td style="text-align: right; font-weight: 600;">\${subtotal.toLocaleString('th-TH')}.00</td>
+                      <td style="text-align: right; font-weight: 600;">${subtotal.toLocaleString('th-TH')}.00</td>
                     </tr>
                     <tr>
                       <td>🚚 ค่าจัดส่ง:</td>
-                      <td style="text-align: right; font-weight: 600;">\${shipping.toLocaleString('th-TH')}.00</td>
+                      <td style="text-align: right; font-weight: 600;">${shipping.toLocaleString('th-TH')}.00</td>
                     </tr>
                     <tr>
                       <td>🏷️ ส่วนลด:</td>
-                      <td style="text-align: right; color: #ef4444; font-weight: 600;">-\\$\${discount.toLocaleString('th-TH')}.00</td>
+                      <td style="text-align: right; color: #ef4444; font-weight: 600;">-${discount.toLocaleString('th-TH')}.00</td>
                     </tr>
                     <tr class="grand-total-row">
                       <td>ยอดสุทธิทั้งสิ้น:</td>
-                      <td style="text-align: right;">\${Math.max(0, total).toLocaleString('th-TH')}.00</td>
+                      <td style="text-align: right;">${Math.max(0, total).toLocaleString('th-TH')}.00</td>
                     </tr>
                   </table>
                 </td>
@@ -1379,7 +1381,7 @@
         const parts = billDateRaw.split('-');
         if (parts.length === 3) {
           const monthsTh = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
-          displayDate = `\${parseInt(parts[2])} \${monthsTh[parseInt(parts[1]) - 1]} \${parseInt(parts[0]) + 543}`;
+          displayDate = `${parseInt(parts[2])} ${monthsTh[parseInt(parts[1]) - 1]} ${parseInt(parts[0]) + 543}`;
         }
       }
       
@@ -1389,18 +1391,18 @@
       const items = activeBillItems.map(item => {
         let desc = "";
         if (item.brideName === '[งานบวช]') {
-          desc = `งานตัดป้ายโฟมงานบวช: นาค \${item.groomName} (ชิ้นที่ \${item.pieceIndex})`;
+          desc = `งานตัดป้ายโฟมงานบวช: นาค ${item.groomName} (ชิ้นที่ ${item.pieceIndex})`;
         } else if (item.brideName && item.groomName) {
-          desc = `งานตัดป้ายโฟมงานแต่ง: \${item.groomName} & \${item.brideName} (ชิ้นที่ \${item.pieceIndex})`;
+          desc = `งานตัดป้ายโฟมงานแต่ง: ${item.groomName} & ${item.brideName} (ชิ้นที่ ${item.pieceIndex})`;
         } else {
-          desc = `งานตัดป้ายโลโก้โฟมสั่งทำพิเศษ (#\${item.id}) (ชิ้นที่ \${item.pieceIndex})`;
+          desc = `งานตัดป้ายโลโก้โฟมสั่งทำพิเศษ (#${item.id}) (ชิ้นที่ ${item.pieceIndex})`;
         }
         
         const notesVal = item.notes || '';
         const materialMatch = notesVal.match(/\[วัสดุ:\\s*([^\\]]+)\]/);
         const material = materialMatch ? materialMatch[1] : 'รองโฟม'; 
         
-        const specDetails = `ขนาด: \${item.pieceSize || '-'} (\${material})<br>สีชิ้นงาน: \${item.pieceColor || '-'}`;
+        const specDetails = `ขนาด: ${item.pieceSize || '-'} (${material})<br>สีชิ้นงาน: ${item.pieceColor || '-'}`;
         const price = item.billPrice;
         subtotal += price;
         
@@ -1429,7 +1431,8 @@
 
       if (itemIdsWithImages.length > 0) {
         setTimeout(() => {
-          if (confirm("พิมพ์ใบเสร็จ/ใบวางบิลเรียบร้อยแล้วหรือไม่?\\nต้องการลบรูปภาพผลงานชิ้นงานเสร็จในบิลนี้ออกจากระบบคลาวด์ทันที เพื่อประหยัดพื้นที่เก็บข้อมูล (ไม่กินเนื้อที่กิ๊กกะไบต์) หรือไม่?")) {
+          if (confirm("พิมพ์ใบเสร็จ/ใบวางบิลเรียบร้อยแล้วหรือไม่?
+ต้องการลบรูปภาพผลงานชิ้นงานเสร็จในบิลนี้ออกจากระบบคลาวด์ทันที เพื่อประหยัดพื้นที่เก็บข้อมูล (ไม่กินเนื้อที่กิ๊กกะไบต์) หรือไม่?")) {
             clearFinishedImagesFromServer(itemIdsWithImages);
           }
         }, 1000);
@@ -1480,7 +1483,7 @@
       const parts = displayDate.split('-');
       if (parts.length === 3) {
         const monthsTh = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
-        formattedDisplayDate = `\${parseInt(parts[2])} \${monthsTh[parseInt(parts[1]) - 1]} \${parseInt(parts[0]) + 543}`;
+        formattedDisplayDate = `${parseInt(parts[2])} ${monthsTh[parseInt(parts[1]) - 1]} ${parseInt(parts[0]) + 543}`;
       }
       
       const invoiceNo = "INV-" + new Date().toISOString().slice(2,10).replace(/-/g,"") + "-" + Math.floor(100 + Math.random() * 900);
@@ -1489,18 +1492,18 @@
       const items = activeBillItems.map(item => {
         let desc = "";
         if (item.brideName === '[งานบวช]') {
-          desc = `งานตัดป้ายโฟมงานบวช: นาค \${item.groomName} (ชิ้นที่ \${item.pieceIndex})`;
+          desc = `งานตัดป้ายโฟมงานบวช: นาค ${item.groomName} (ชิ้นที่ ${item.pieceIndex})`;
         } else if (item.brideName && item.groomName) {
-          desc = `งานตัดป้ายโฟมงานแต่ง: \${item.groomName} & \${item.brideName} (ชิ้นที่ \${item.pieceIndex})`;
+          desc = `งานตัดป้ายโฟมงานแต่ง: ${item.groomName} & ${item.brideName} (ชิ้นที่ ${item.pieceIndex})`;
         } else {
-          desc = `งานตัดป้ายโลโก้โฟมสั่งทำพิเศษ (#\${item.id}) (ชิ้นที่ \${item.pieceIndex})`;
+          desc = `งานตัดป้ายโลโก้โฟมสั่งทำพิเศษ (#${item.id}) (ชิ้นที่ ${item.pieceIndex})`;
         }
         
         const notesVal = item.notes || '';
         const materialMatch = notesVal.match(/\[วัสดุ:\\s*([^\\]]+)\]/);
         const material = materialMatch ? materialMatch[1] : 'รองโฟม';
         
-        const specDetails = `ขนาด: \${item.pieceSize || '-'} (\${material})<br>สีชิ้นงาน: \${item.pieceColor || '-'}`;
+        const specDetails = `ขนาด: ${item.pieceSize || '-'} (${material})<br>สีชิ้นงาน: ${item.pieceColor || '-'}`;
         const price = item.billPrice;
         subtotal += price;
         
@@ -1555,7 +1558,7 @@
         if (response.ok) {
           const res = await response.json();
           if (res.success) {
-            alert(`บันทึกบิลเลขที่ \${invoiceNo} ลง Google Sheets สำเร็จ!`);
+            alert(`บันทึกบิลเลขที่ ${invoiceNo} ลง Google Sheets สำเร็จ!`);
             clearActiveBill();
             switchBillingSubTab('history');
           } else {
@@ -1620,20 +1623,20 @@
           const timePart = parts[1] || '';
           const dParts = datePart.split('-');
           if (dParts.length === 3) {
-            displayDate = `\${dParts[2]}/\${dParts[1]}/\${parseInt(dParts[0]) + 543}\${timePart ? ' ' + timePart : ''}`;
+            displayDate = `${dParts[2]}/${dParts[1]}/${parseInt(dParts[0]) + 543}${timePart ? ' ' + timePart : ''}`;
           }
         }
         
         const totalFormatted = (bill.total || 0).toLocaleString('th-TH');
         
         tr.innerHTML = `
-          <td style="font-weight: 600;">\${bill.billId}</td>
-          <td style="font-size: 0.85rem; color: var(--text-muted);">\${displayDate}</td>
-          <td>\${bill.customerName || '-'}</td>
-          <td style="text-align: right; font-weight: 600; color: var(--accent-color);">\${totalFormatted} บาท</td>
+          <td style="font-weight: 600;">${bill.billId}</td>
+          <td style="font-size: 0.85rem; color: var(--text-muted);">${displayDate}</td>
+          <td>${bill.customerName || '-'}</td>
+          <td style="text-align: right; font-weight: 600; color: var(--accent-color);">${totalFormatted} บาท</td>
           <td style="text-align: center;">
-            <button class="btn btn-gold" onclick="printHistoricalBill('\${bill.billId}')" style="padding: 0.25rem 0.6rem; font-size: 0.75rem; margin-right: 5px;">🖨️ พิมพ์บิล</button>
-            <button class="btn btn-outline" onclick="deleteBillHistory('\${bill.billId}')" style="padding: 0.25rem 0.6rem; font-size: 0.75rem; border-color: #ef4444; color: #ef4444;">🗑️ ลบ</button>
+            <button class="btn btn-gold" onclick="printHistoricalBill('${bill.billId}')" style="padding: 0.25rem 0.6rem; font-size: 0.75rem; margin-right: 5px;">🖨️ พิมพ์บิล</button>
+            <button class="btn btn-outline" onclick="deleteBillHistory('${bill.billId}')" style="padding: 0.25rem 0.6rem; font-size: 0.75rem; border-color: #ef4444; color: #ef4444;">🗑️ ลบ</button>
           </td>
         `;
         tbody.appendChild(tr);
@@ -1641,7 +1644,7 @@
     }
     
     async function deleteBillHistory(billId) {
-      if (!confirm(`ยืนยันที่จะลบประวัติบิลเลขที่ \${billId} ออกจาก Google Sheets ใช่หรือไม่?`)) return;
+      if (!confirm(`ยืนยันที่จะลบประวัติบิลเลขที่ ${billId} ออกจาก Google Sheets ใช่หรือไม่?`)) return;
       
       try {
         const response = await fetch(GOOGLE_SHEET_URL, {
@@ -1656,7 +1659,7 @@
         if (response.ok) {
           const res = await response.json();
           if (res.success) {
-            alert(`ลบประวัติบิลเลขที่ \${billId} สำเร็จ!`);
+            alert(`ลบประวัติบิลเลขที่ ${billId} สำเร็จ!`);
             fetchBillsHistory();
           } else {
             alert("ลบล้มเหลว: " + res.error);
@@ -1688,7 +1691,7 @@
         const parts = displayDate.split(' ')[0].split('-');
         if (parts.length === 3) {
           const monthsTh = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
-          displayDate = `\${parseInt(parts[2])} \${monthsTh[parseInt(parts[1]) - 1]} \${parseInt(parts[0]) + 543}`;
+          displayDate = `${parseInt(parts[2])} ${monthsTh[parseInt(parts[1]) - 1]} ${parseInt(parts[0]) + 543}`;
         }
       }
       
