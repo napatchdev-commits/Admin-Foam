@@ -254,6 +254,75 @@ function doPost(e) {
       return jsonResponse({ success: true, id: nextId });
     }
     
+    if (action === 'editOrder') {
+      var orderSheet = sheet.getSheetByName('Orders') || createOrdersSheet(sheet);
+      var data = orderSheet.getDataRange().getValues();
+      var headers = data[0];
+      var targetId = params.id;
+      
+      var targetRowIdx = -1;
+      for (var i = 1; i < data.length; i++) {
+        if (Number(data[i][0]) === Number(targetId)) {
+          targetRowIdx = i + 1;
+          break;
+        }
+      }
+      
+      if (targetRowIdx === -1) {
+        return jsonResponse({ success: false, error: 'Order not found' });
+      }
+      
+      var imageUrls = [];
+      if (params.images && params.images.length > 0) {
+        var folderName = "Logo Foam Uploads";
+        var folders = DriveApp.getFoldersByName(folderName);
+        var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
+        
+        params.images.forEach(function(img) {
+          if (img.isExisting && img.url) {
+            imageUrls.push(img.url);
+          } else if (img.data && img.data.indexOf('base64,') > -1) {
+            var parts = img.data.split('base64,');
+            var contentType = parts[0].split(':')[1].split(';')[0];
+            var base64Data = parts[1];
+            
+            var decoded = Utilities.base64Decode(base64Data);
+            var blob = Utilities.newBlob(decoded, contentType, "order_" + targetId + "_" + img.filename);
+            var file = folder.createFile(blob);
+            
+            file.setSharing(DriveApp.Access.ANYONE, DriveApp.Permission.VIEW);
+            imageUrls.push(file.getUrl());
+          }
+        });
+      }
+      
+      var customerNameIdx = headers.indexOf('customerName');
+      var groomNameIdx = headers.indexOf('groomName');
+      var brideNameIdx = headers.indexOf('brideName');
+      var requiredDateIdx = headers.indexOf('requiredDate');
+      var sizeIdx = headers.indexOf('size');
+      var colorIdx = headers.indexOf('color');
+      var notesIdx = headers.indexOf('notes');
+      var imagesIdx = headers.indexOf('images');
+      
+      if (customerNameIdx > -1) orderSheet.getRange(targetRowIdx, customerNameIdx + 1).setValue(params.customerName || '');
+      if (groomNameIdx > -1) orderSheet.getRange(targetRowIdx, groomNameIdx + 1).setValue(params.groomName || '');
+      if (brideNameIdx > -1) orderSheet.getRange(targetRowIdx, brideNameIdx + 1).setValue(params.brideName || '');
+      if (requiredDateIdx > -1) orderSheet.getRange(targetRowIdx, requiredDateIdx + 1).setValue(params.requiredDate || '');
+      if (sizeIdx > -1) orderSheet.getRange(targetRowIdx, sizeIdx + 1).setValue(params.size || '');
+      if (colorIdx > -1) orderSheet.getRange(targetRowIdx, colorIdx + 1).setValue(params.color || '');
+      if (notesIdx > -1) orderSheet.getRange(targetRowIdx, notesIdx + 1).setValue(params.notes || '');
+      if (imagesIdx > -1) orderSheet.getRange(targetRowIdx, imagesIdx + 1).setValue(imageUrls.join(','));
+      
+      try {
+        triggerLineUpdateNotification(sheet, targetId, params, imageUrls);
+      } catch (lineErr) {
+        Logger.log("Error in triggerLineUpdateNotification: " + lineErr.toString());
+      }
+      
+      return jsonResponse({ success: true });
+    }
+    
     if (action === 'updateStatus') {
       var orderSheet = sheet.getSheetByName('Orders') || createOrdersSheet(sheet);
       var data = orderSheet.getDataRange().getValues();
@@ -585,6 +654,86 @@ function triggerLineNotification(sheet, nextId, params, imageUrls) {
   } catch (err) {
     Logger.log("Error in triggerLineNotification: " + err.toString());
     writeErrorToConfig(configSheet, "Script Crash: " + err.toString());
+  }
+}
+
+function triggerLineUpdateNotification(sheet, targetId, params, imageUrls) {
+  sheet = sheet || SpreadsheetApp.getActiveSpreadsheet();
+  params = params || {};
+  imageUrls = imageUrls || [];
+  targetId = targetId || "TEST";
+  
+  var configSheet = sheet.getSheetByName('Config') || createConfigSheet(sheet);
+  try {
+    var configData = configSheet.getDataRange().getValues();
+    
+    var lineNotifyEnabled = false;
+    var lineChannelAccessToken = "";
+    var lineRecipientId = "";
+    
+    for (var i = 1; i < configData.length; i++) {
+      var key = String(configData[i][0]).trim();
+      var val = configData[i][1];
+      if (key.toLowerCase() === 'linenotifyenabled') {
+        lineNotifyEnabled = (String(val).toLowerCase() === 'true' || val === true);
+      }
+      if (key.toLowerCase() === 'linechannelaccesstoken') {
+        lineChannelAccessToken = String(val).trim();
+      }
+      if (key.toLowerCase() === 'linerecipientid') {
+        lineRecipientId = String(val).trim();
+      }
+    }
+    
+    if (!lineNotifyEnabled) {
+      return;
+    }
+    
+    if (!lineChannelAccessToken) {
+      return;
+    }
+    
+    var groom = params.groomName || "-";
+    var bride = params.brideName || "-";
+    var notes = params.notes || "-";
+    
+    var rawDate = params.requiredDate;
+    var displayDate = rawDate;
+    if (rawDate && rawDate.split('-').length === 3) {
+      var dateParts = rawDate.split('-');
+      displayDate = dateParts[2] + "/" + dateParts[1] + "/" + (parseInt(dateParts[0]) + 543);
+    }
+    
+    var messageText = "";
+    if (bride === '[งานบวช]') {
+      messageText = "✏️ มีการแก้ไขรายละเอียดสั่งตัด! (งานบวช) (รหัส #" + targetId + ")\n" +
+                    "👤 ลูกค้า: " + params.customerName + "\n" +
+                    "👶 ชื่อนาค: " + groom + "\n" +
+                    "📅 วันที่ใช้: " + displayDate + "\n" +
+                    "📐 ขนาด: " + params.size + "\n" +
+                    "🎨 สี: " + params.color + "\n" +
+                    "📝 หมายเหตุ: " + notes;
+    } else {
+      messageText = "✏️ มีการแก้ไขรายละเอียดสั่งตัด! (รหัส #" + targetId + ")\n" +
+                    "👤 ลูกค้า: " + params.customerName + "\n" +
+                    "🤵 เจ้าบ่าว: " + groom + "\n" +
+                    "👰 เจ้าสาว: " + bride + "\n" +
+                    "📅 วันที่ใช้: " + displayDate + "\n" +
+                    "📐 ขนาด: " + params.size + "\n" +
+                    "🎨 สี: " + params.color + "\n" +
+                    "📝 หมายเหตุ: " + notes;
+    }
+                       
+    var textMessages = [
+      {
+        type: "text",
+        text: messageText
+      }
+    ];
+ 
+    sendLinePushMessage(lineChannelAccessToken, lineRecipientId, textMessages, configSheet);
+  } catch (err) {
+    Logger.log("Error in triggerLineUpdateNotification: " + err.toString());
   }
 }
 
