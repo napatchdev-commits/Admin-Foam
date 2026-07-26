@@ -464,10 +464,20 @@ function doPost(e) {
     
     if (action === 'saveBill') {
       var billsSheet = sheet.getSheetByName('Bills') || createBillsSheet(sheet);
+      var data = billsSheet.getDataRange().getValues();
+      var targetBillId = params.billId;
       
-      billsSheet.appendRow([
+      var targetRowIdx = -1;
+      for (var i = 1; i < data.length; i++) {
+        if (String(data[i][0]) === String(targetBillId)) {
+          targetRowIdx = i + 1;
+          break;
+        }
+      }
+      
+      var rowValues = [
         params.billId,
-        Utilities.formatDate(new Date(), "GMT+7", "yyyy-MM-dd HH:mm:ss"),
+        targetRowIdx > -1 ? data[targetRowIdx - 1][1] : Utilities.formatDate(new Date(), "GMT+7", "yyyy-MM-dd HH:mm:ss"),
         params.customerName,
         JSON.stringify(params.items),
         params.shipping || 0,
@@ -477,7 +487,13 @@ function doPost(e) {
         params.paymentAccountNumber || '',
         params.paymentAccountName || '',
         params.paymentQrUrl || ''
-      ]);
+      ];
+      
+      if (targetRowIdx > -1) {
+        billsSheet.getRange(targetRowIdx, 1, 1, rowValues.length).setValues([rowValues]);
+      } else {
+        billsSheet.appendRow(rowValues);
+      }
       return jsonResponse({ success: true });
     }
     

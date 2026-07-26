@@ -1021,13 +1021,23 @@
           </div>
 
           <!-- Action Buttons (Print and Save) -->
-          <div style="margin-top: 1.2rem; display: flex; gap: 0.8rem;">
-            <button class="btn btn-gold" onclick="printSummaryBill()" style="flex: 1.3; padding: 0.8rem; font-size: 0.95rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.5rem; box-shadow: 0 4px 12px rgba(180, 83, 9, 0.2);">
-              🖨️ พิมพ์ใบสรุปบิลเรียกเก็บเงิน
-            </button>
-            <button class="btn btn-outline" onclick="saveActiveBillToSheet()" style="flex: 1; padding: 0.8rem; font-size: 0.95rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 0.5rem; border-color: var(--accent-color); color: var(--accent-color);">
-              💾 บันทึกบิลย้อนหลัง
-            </button>
+          <div style="margin-top: 1.2rem; display: flex; flex-direction: column; gap: 0.8rem;">
+            <!-- Indicator for Editing Bill -->
+            <div id="editing-bill-indicator" style="display: none; background: rgba(14, 165, 233, 0.15); border: 1px solid #0ea5e9; color: #38bdf8; padding: 0.6rem; border-radius: 8px; font-size: 0.88rem; font-weight: 600; text-align: center; width: 100%;">
+              ✏️ กำลังแก้ไขบิลเลขที่: <span id="editing-bill-id-text"></span>
+            </div>
+            
+            <div style="display: flex; gap: 0.8rem; width: 100%;">
+              <button class="btn btn-gold" onclick="printSummaryBill()" style="flex: 1.3; padding: 0.8rem; font-size: 0.95rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.5rem; box-shadow: 0 4px 12px rgba(180, 83, 9, 0.2);">
+                🖨️ พิมพ์ใบสรุปบิลเรียกเก็บเงิน
+              </button>
+              <button class="btn btn-outline" id="btn-save-bill" onclick="saveActiveBillToSheet()" style="flex: 1; padding: 0.8rem; font-size: 0.95rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 0.5rem; border-color: var(--accent-color); color: var(--accent-color);">
+                💾 บันทึกบิลย้อนหลัง
+              </button>
+              <button class="btn btn-outline" id="btn-cancel-edit-bill" onclick="cancelEditBill()" style="flex: 0.7; padding: 0.8rem; font-size: 0.95rem; font-weight: 600; display: none; align-items: center; justify-content: center; gap: 0.5rem; border-color: #ef4444; color: #ef4444;">
+                ❌ ยกเลิก
+              </button>
+            </div>
           </div>
 
         </div>

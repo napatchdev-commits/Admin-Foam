@@ -620,6 +620,7 @@
 
     // Billing Tab Logic
     let activeBillItems = [];
+    let editingBillId = null;
 
     function initializeBillingTab() {
       // Set bill date to today
@@ -1487,7 +1488,7 @@
         formattedDisplayDate = `${parseInt(parts[2])} ${monthsTh[parseInt(parts[1]) - 1]} ${parseInt(parts[0]) + 543}`;
       }
       
-      const invoiceNo = "INV-" + new Date().toISOString().slice(2,10).replace(/-/g,"") + "-" + Math.floor(100 + Math.random() * 900);
+      const invoiceNo = editingBillId || ("INV-" + new Date().toISOString().slice(2,10).replace(/-/g,"") + "-" + Math.floor(100 + Math.random() * 900));
       
       let subtotal = 0;
       const items = activeBillItems.map(item => {
@@ -1542,7 +1543,7 @@
       };
       
       try {
-        const btn = document.querySelector('button[onclick="saveActiveBillToSheet()"]');
+        const btn = document.getElementById('btn-save-bill') || document.querySelector('button[onclick="saveActiveBillToSheet()"]');
         const origText = btn.innerText;
         btn.disabled = true;
         btn.innerText = "⏳ กำลังบันทึก...";
@@ -1559,8 +1560,9 @@
         if (response.ok) {
           const res = await response.json();
           if (res.success) {
-            alert(`บันทึกบิลเลขที่ ${invoiceNo} ลง Google Sheets สำเร็จ!`);
+            alert(editingBillId ? `บันทึกการแก้ไขบิลเลขที่ ${invoiceNo} สำเร็จ!` : `บันทึกบิลเลขที่ ${invoiceNo} ลง Google Sheets สำเร็จ!`);
             clearActiveBill();
+            if (window.cancelEditBill) window.cancelEditBill();
             switchBillingSubTab('history');
           } else {
             alert("บันทึกล้มเหลว: " + res.error);
@@ -1636,7 +1638,8 @@
           <td>${bill.customerName || '-'}</td>
           <td style="text-align: right; font-weight: 600; color: var(--accent-color);">${totalFormatted} บาท</td>
           <td style="text-align: center;">
-            <button class="btn btn-gold" onclick="printHistoricalBill('${bill.billId}')" style="padding: 0.25rem 0.6rem; font-size: 0.75rem; margin-right: 5px;">🖨️ พิมพ์บิล</button>
+            <button class="btn btn-gold" onclick="printHistoricalBill('${bill.billId}')" style="padding: 0.25rem 0.6rem; font-size: 0.75rem; margin-right: 3px;">🖨️ พิมพ์บิล</button>
+            <button class="btn btn-gold" onclick="editHistoricalBill('${bill.billId}')" style="padding: 0.25rem 0.6rem; font-size: 0.75rem; margin-right: 3px; background-color: #0ea5e9; border-color: #0ea5e9;">✏️ แก้ไขบิล</button>
             <button class="btn btn-outline" onclick="deleteBillHistory('${bill.billId}')" style="padding: 0.25rem 0.6rem; font-size: 0.75rem; border-color: #ef4444; color: #ef4444;">🗑️ ลบ</button>
           </td>
         `;
@@ -1710,6 +1713,157 @@
     }
     
     window.printHistoricalBill = printHistoricalBill;
+
+    function cancelEditBill() {
+      editingBillId = null;
+      const indicator = document.getElementById('editing-bill-indicator');
+      if (indicator) indicator.style.display = 'none';
+      const cancelBtn = document.getElementById('btn-cancel-edit-bill');
+      if (cancelBtn) cancelBtn.style.display = 'none';
+      const saveBtn = document.getElementById('btn-save-bill');
+      if (saveBtn) {
+        saveBtn.innerHTML = '💾 บันทึกบิลย้อนหลัง';
+        saveBtn.style.background = '';
+      }
+      clearActiveBill();
+    }
+    
+    window.cancelEditBill = cancelEditBill;
+
+    function editHistoricalBill(billId) {
+      const bill = allBills.find(b => b.billId === billId);
+      if (!bill) {
+        alert("ไม่พบข้อมูลบิลที่เลือก");
+        return;
+      }
+      
+      clearActiveBill();
+      
+      editingBillId = billId;
+      
+      // Update UI Indicators
+      const textIdEl = document.getElementById('editing-bill-id-text');
+      if (textIdEl) textIdEl.innerText = billId;
+      const indicator = document.getElementById('editing-bill-indicator');
+      if (indicator) indicator.style.display = 'block';
+      const cancelBtn = document.getElementById('btn-cancel-edit-bill');
+      if (cancelBtn) cancelBtn.style.display = 'inline-flex';
+      
+      const saveBtn = document.getElementById('btn-save-bill');
+      if (saveBtn) {
+        saveBtn.innerHTML = '💾 บันทึกการแก้ไขบิล';
+        saveBtn.style.background = 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)';
+      }
+      
+      // Switch back to create subtab
+      switchBillingSubTab('create');
+      
+      // Populate fields
+      const custNameInput = document.getElementById('bill-customer-name');
+      if (custNameInput) custNameInput.value = bill.customerName || '';
+      
+      // Re-populate Date
+      let billDate = bill.createdDate || '';
+      if (billDate.includes(' ')) {
+        billDate = billDate.split(' ')[0]; // yyyy-MM-dd
+      }
+      const billDateInput = document.getElementById('bill-date');
+      if (billDateInput) billDateInput.value = billDate;
+      
+      const shippingInput = document.getElementById('bill-shipping');
+      if (shippingInput) shippingInput.value = bill.shipping || 0;
+      const discountInput = document.getElementById('bill-discount');
+      if (discountInput) discountInput.value = bill.discount || 0;
+      
+      const bankInput = document.getElementById('payment-bank');
+      if (bankInput) bankInput.value = bill.paymentBank || '';
+      const accNumInput = document.getElementById('payment-account-number');
+      if (accNumInput) accNumInput.value = bill.paymentAccountNumber || '';
+      const accNameInput = document.getElementById('payment-account-name');
+      if (accNameInput) accNameInput.value = bill.paymentAccountName || '';
+      const qrUrlInput = document.getElementById('payment-qr-url');
+      if (qrUrlInput) qrUrlInput.value = bill.paymentQrUrl || '';
+      
+      // Previews payment image if exists
+      const qrPreviewContainer = document.getElementById('payment-qr-preview-container');
+      const qrPreview = document.getElementById('payment-qr-preview');
+      if (bill.paymentQrUrl && qrPreviewContainer && qrPreview) {
+        const directUrl = getDirectImageUrl(bill.paymentQrUrl);
+        qrPreview.src = directUrl;
+        qrPreviewContainer.style.display = 'block';
+      } else if (qrPreviewContainer) {
+        qrPreviewContainer.style.display = 'none';
+      }
+      
+      // Re-populate activeBillItems
+      const items = Array.isArray(bill.items) ? bill.items : [];
+      
+      items.forEach(item => {
+        const order = allOrders.find(o => o.id === item.id);
+        if (order) {
+          const pieceIndex = parseInt(item.billItemId.split('_')[1]) || 1;
+          const sizeStr = order.size || '';
+          const qtyMatch = sizeStr.match(/จำนวน:\s*(\d+)/);
+          const qty = qtyMatch ? parseInt(qtyMatch[1]) : 1;
+          const cleanSize = sizeStr.replace(/\s*\(จำนวน:\s*\d+\s*ชิ้น\)/i, "");
+          const sizeParts = cleanSize.split(/ชิ้นที่\s*\d+:\s*/).map(s => s.trim().replace(/,$/, "").replace(/,$/, "")).filter(Boolean);
+          const colorStr = order.color || '';
+          const colorParts = colorStr.split(/ชิ้นที่\s*\d+:\s*/).map(c => c.trim().replace(/,$/, "").replace(/,$/, "")).filter(Boolean);
+          
+          const pieceSize = sizeParts[pieceIndex - 1] || sizeParts[0] || cleanSize || '-';
+          const pieceColor = colorParts[pieceIndex - 1] || colorParts[0] || colorStr || '-';
+          
+          activeBillItems.push({
+            ...order,
+            billItemId: item.billItemId,
+            pieceIndex: pieceIndex,
+            pieceSize: pieceSize,
+            pieceColor: pieceColor,
+            billPrice: item.price
+          });
+        } else {
+          // Reconstruct dummy order from description & specs
+          let groom = "";
+          let bride = "";
+          if (item.desc.includes("งานแต่ง:")) {
+            const names = item.desc.split("งานแต่ง:")[1].split("(ชิ้นที่")[0].trim();
+            const parts = names.split("&");
+            groom = parts[0] ? parts[0].trim() : "";
+            bride = parts[1] ? parts[1].trim() : "";
+          } else if (item.desc.includes("งานบวช:")) {
+            groom = item.desc.split("นาค")[1].split("(ชิ้นที่")[0].trim();
+            bride = "[งานบวช]";
+          }
+          
+          const specsHtml = item.specs || '';
+          const sizeMatch = specsHtml.match(/ขนาด:\s*([^<]+)/);
+          const colorMatch = specsHtml.match(/สีชิ้นงาน:\s*(.+)$/);
+          const pieceSize = sizeMatch ? sizeMatch[1].split(' (')[0].trim() : '-';
+          const pieceColor = colorMatch ? colorMatch[1].trim() : '-';
+          
+          const materialMatch = specsHtml.match(/\(([^)]+)\)/);
+          const material = materialMatch ? materialMatch[1] : 'รองโฟม';
+          
+          activeBillItems.push({
+            id: item.id,
+            billItemId: item.billItemId,
+            groomName: groom,
+            brideName: bride,
+            pieceIndex: parseInt(item.billItemId.split('_')[1]) || 1,
+            pieceSize: pieceSize,
+            pieceColor: pieceColor,
+            notes: `[วัสดุ: ${material}]`,
+            finishedImage: item.finishedImage || '',
+            billPrice: item.price
+          });
+        }
+      });
+      
+      updateActiveBillTable();
+      populateBillingOrdersTable(); // Refresh Left column buttons
+    }
+    
+    window.editHistoricalBill = editHistoricalBill;
 
     // Init
     window.addEventListener('DOMContentLoaded', () => {
