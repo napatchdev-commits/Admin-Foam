@@ -177,6 +177,13 @@ function doPost(e) {
   
   try {
     var params = JSON.parse(e.postData.contents || "{}");
+    
+    // Check if this is a LINE Webhook
+    if (params.events && Array.isArray(params.events)) {
+      handleLineWebhook(params.events);
+      return jsonResponse({ success: true, message: "LINE webhook processed successfully" });
+    }
+    
     var action = params.action;
     var sheet = SpreadsheetApp.getActiveSpreadsheet();
     
@@ -922,4 +929,100 @@ function createBillsSheet(sheet) {
     ]);
   }
   return billsSheet;
+}
+
+function handleLineWebhook(events) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet();
+  var configSheet = sheet.getSheetByName('Config') || createConfigSheet(sheet);
+  var configData = configSheet.getDataRange().getValues();
+  
+  // Extract lineChannelAccessToken to reply back if needed
+  var lineChannelAccessToken = "";
+  for (var i = 1; i < configData.length; i++) {
+    var key = String(configData[i][0]).trim();
+    if (key.toLowerCase() === 'linechannelaccesstoken') {
+      lineChannelAccessToken = String(configData[i][1]).trim();
+    }
+  }
+  
+  events.forEach(function(event) {
+    var source = event.source || {};
+    var replyToken = event.replyToken;
+    var targetId = "";
+    
+    if (source.type === 'group' && source.groupId) {
+      targetId = source.groupId;
+    } else if (source.type === 'room' && source.roomId) {
+      targetId = source.roomId;
+    } else if (source.type === 'user' && source.userId) {
+      targetId = source.userId;
+    }
+    
+    if (targetId) {
+      // Update lineRecipientId in Config sheet
+      var updated = false;
+      var data = configSheet.getDataRange().getValues();
+      for (var r = 1; r < data.length; r++) {
+        var k = String(data[r][0]).trim().toLowerCase();
+        if (k === 'linerecipientid') {
+          configSheet.getRange(r + 1, 2).setValue(targetId);
+          updated = true;
+          break;
+        }
+      }
+      
+      if (!updated) {
+        configSheet.appendRow(['lineRecipientId', targetId]);
+      }
+      
+      // Reply to group/user if join event or text command
+      var shouldReply = false;
+      var replyText = "";
+      
+      if (event.type === 'join') {
+        shouldReply = true;
+        replyText = "บอทเชื่อมต่อสำเร็จ! ได้ทำการบันทึกไอดีห้อง/กลุ่มในฐานข้อมูลแผ่นงานเรียบร้อยแล้ว\nID: " + targetId;
+      } else if (event.type === 'message' && event.message && event.message.type === 'text') {
+        var msgText = String(event.message.text).trim();
+        if (msgText === 'ดึงไอดี' || msgText === 'get id' || msgText === 'id') {
+          shouldReply = true;
+          replyText = "บันทึกไอดีผู้รับปลายทาง (Recipient ID) ลงในแผ่นงานเรียบร้อยแล้วครับ!\nID: " + targetId;
+        }
+      }
+      
+      if (shouldReply && replyToken && lineChannelAccessToken) {
+        sendLineReplyMessage(lineChannelAccessToken, replyToken, replyText);
+      }
+    }
+  });
+}
+
+function sendLineReplyMessage(token, replyToken, text) {
+  var url = 'https://api.line.me/v2/bot/message/reply';
+  var payload = {
+    replyToken: replyToken,
+    messages: [
+      {
+        type: 'text',
+        text: text
+      }
+    ]
+  };
+  
+  var options = {
+    method: 'post',
+    contentType: 'application/json',
+    headers: {
+      Authorization: 'Bearer ' + token
+    },
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+  
+  try {
+    var response = UrlFetchApp.fetch(url, options);
+    Logger.log("Reply response: " + response.getContentText());
+  } catch (err) {
+    Logger.log("Error replying to LINE: " + err.toString());
+  }
 }
