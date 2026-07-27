@@ -665,15 +665,31 @@ function triggerLineNotification(sheet, nextId, params, imageUrls) {
                     "📝 หมายเหตุ: " + notes;
     }
                       
-    var textMessages = [
+    var lineMessages = [
       {
         type: "text",
         text: messageText
       }
     ];
+    
+    if (imageUrls && imageUrls.length > 0) {
+      var imgCount = 0;
+      imageUrls.forEach(function(url) {
+        if (imgCount < 4) {
+          var directUrl = getDirectImageUrlAppsScript(url);
+          if (directUrl) {
+            lineMessages.push({
+              type: "image",
+              originalContentUrl: directUrl,
+              previewImageUrl: directUrl
+            });
+            imgCount++;
+          }
+        }
+      });
+    }
  
-    // Send text notification with error logger
-    sendLinePushMessage(lineChannelAccessToken, lineRecipientId, textMessages, configSheet);
+    sendLinePushMessage(lineChannelAccessToken, lineRecipientId, lineMessages, configSheet, imageUrls);
   } catch (err) {
     Logger.log("Error in triggerLineNotification: " + err.toString());
     writeErrorToConfig(configSheet, "Script Crash: " + err.toString());
@@ -747,14 +763,31 @@ function triggerLineUpdateNotification(sheet, targetId, params, imageUrls) {
                     "📝 หมายเหตุ: " + notes;
     }
                        
-    var textMessages = [
+    var lineMessages = [
       {
         type: "text",
         text: messageText
       }
     ];
+    
+    if (imageUrls && imageUrls.length > 0) {
+      var imgCount = 0;
+      imageUrls.forEach(function(url) {
+        if (imgCount < 4) {
+          var directUrl = getDirectImageUrlAppsScript(url);
+          if (directUrl) {
+            lineMessages.push({
+              type: "image",
+              originalContentUrl: directUrl,
+              previewImageUrl: directUrl
+            });
+            imgCount++;
+          }
+        }
+      });
+    }
  
-    sendLinePushMessage(lineChannelAccessToken, lineRecipientId, textMessages, configSheet);
+    sendLinePushMessage(lineChannelAccessToken, lineRecipientId, lineMessages, configSheet, imageUrls);
   } catch (err) {
     Logger.log("Error in triggerLineUpdateNotification: " + err.toString());
   }
@@ -789,7 +822,7 @@ function writeErrorToConfig(configSheet, errText) {
   }
 }
 
-function sendLinePushMessage(token, toId, messagesArray, configSheet) {
+function sendLinePushMessage(token, toId, messagesArray, configSheet, imageUrls) {
   try {
     // Autodetect LINE Notify (1-token free service) vs LINE Bot (Messaging API)
     // If recipient ID is empty or token is standard 43-character notify token
@@ -803,14 +836,24 @@ function sendLinePushMessage(token, toId, messagesArray, configSheet) {
         }
       });
       
+      var postPayload = {
+        message: messageString.trim()
+      };
+      
+      if (imageUrls && imageUrls.length > 0) {
+        var directUrl = getDirectImageUrlAppsScript(imageUrls[0]);
+        if (directUrl) {
+          postPayload.imageThumbnail = directUrl;
+          postPayload.imageFullsize = directUrl;
+        }
+      }
+      
       var options = {
         method: "post",
         headers: {
           "Authorization": "Bearer " + token
         },
-        payload: {
-          message: messageString.trim()
-        },
+        payload: postPayload,
         muteHttpExceptions: true
       };
       
