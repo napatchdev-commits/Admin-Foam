@@ -121,13 +121,11 @@ function doGet(e) {
       for (var i = 1; i < data.length; i++) {
         var key = data[i][0];
         var val = data[i][1];
-        if (key === 'lineNotifyEnabled') config.lineNotifyEnabled = (val === true || val === 'true');
-        if (key === 'lineChannelAccessToken') config.lineChannelAccessToken = val;
-        if (key === 'lineRecipientId') config.lineRecipientId = val;
-        if (key === 'paymentBank') config.paymentBank = val;
-        if (key === 'paymentAccountNumber') config.paymentAccountNumber = val;
-        if (key === 'paymentAccountName') config.paymentAccountName = val;
-        if (key === 'paymentQrUrl') config.paymentQrUrl = val;
+        if (key === 'lineNotifyEnabled') {
+          config.lineNotifyEnabled = (val === true || val === 'true');
+        } else {
+          config[key] = val;
+        }
       }
       return jsonResponse(config);
     }
@@ -671,25 +669,8 @@ function triggerLineNotification(sheet, nextId, params, imageUrls) {
         text: messageText
       }
     ];
-    
-    if (imageUrls && imageUrls.length > 0) {
-      var imgCount = 0;
-      imageUrls.forEach(function(url) {
-        if (imgCount < 4) {
-          var directUrl = getDirectImageUrlAppsScript(url);
-          if (directUrl) {
-            lineMessages.push({
-              type: "image",
-              originalContentUrl: directUrl,
-              previewImageUrl: directUrl
-            });
-            imgCount++;
-          }
-        }
-      });
-    }
  
-    sendLinePushMessage(lineChannelAccessToken, lineRecipientId, lineMessages, configSheet, imageUrls);
+    sendLinePushMessage(lineChannelAccessToken, lineRecipientId, lineMessages, configSheet, []);
   } catch (err) {
     Logger.log("Error in triggerLineNotification: " + err.toString());
     writeErrorToConfig(configSheet, "Script Crash: " + err.toString());
@@ -769,25 +750,8 @@ function triggerLineUpdateNotification(sheet, targetId, params, imageUrls) {
         text: messageText
       }
     ];
-    
-    if (imageUrls && imageUrls.length > 0) {
-      var imgCount = 0;
-      imageUrls.forEach(function(url) {
-        if (imgCount < 4) {
-          var directUrl = getDirectImageUrlAppsScript(url);
-          if (directUrl) {
-            lineMessages.push({
-              type: "image",
-              originalContentUrl: directUrl,
-              previewImageUrl: directUrl
-            });
-            imgCount++;
-          }
-        }
-      });
-    }
  
-    sendLinePushMessage(lineChannelAccessToken, lineRecipientId, lineMessages, configSheet, imageUrls);
+    sendLinePushMessage(lineChannelAccessToken, lineRecipientId, lineMessages, configSheet, []);
   } catch (err) {
     Logger.log("Error in triggerLineUpdateNotification: " + err.toString());
   }
