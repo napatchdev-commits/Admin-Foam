@@ -397,6 +397,47 @@ function doPost(e) {
       return jsonResponse({ success: false, error: 'Order not found' });
     }
 
+    if (action === 'updateArtwork') {
+      var orderSheet = sheet.getSheetByName('Orders') || createOrdersSheet(sheet);
+      var data = orderSheet.getDataRange().getValues();
+      var headers = data[0];
+      
+      var artworkIdx = headers.indexOf('artwork');
+      if (artworkIdx === -1) {
+        orderSheet.getRange(1, headers.length + 1).setValue('artwork');
+        headers.push('artwork');
+        artworkIdx = headers.length - 1;
+        data = orderSheet.getDataRange().getValues();
+      }
+      
+      var targetId = params.id;
+      var artworkUrl = "";
+      
+      if (params.artworkData && params.artworkData.indexOf('base64,') > -1) {
+        var folderName = "Logo Foam Uploads";
+        var folders = DriveApp.getFoldersByName(folderName);
+        var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
+        
+        var parts = params.artworkData.split('base64,');
+        var contentType = parts[0].split(':')[1].split(';')[0];
+        var base64Data = parts[1];
+        
+        var decoded = Utilities.base64Decode(base64Data);
+        var blob = Utilities.newBlob(decoded, contentType, "artwork_" + targetId + "_" + (params.filename || "artwork.png"));
+        var file = folder.createFile(blob);
+        file.setSharing(DriveApp.Access.ANYONE, DriveApp.Permission.VIEW);
+        artworkUrl = file.getUrl();
+      }
+      
+      for (var i = 1; i < data.length; i++) {
+        if (Number(data[i][0]) === Number(targetId)) {
+          orderSheet.getRange(i + 1, artworkIdx + 1).setValue(artworkUrl);
+          return jsonResponse({ success: true, artwork: artworkUrl });
+        }
+      }
+      return jsonResponse({ success: false, error: 'Order not found' });
+    }
+
     if (action === 'deleteFinishedImages') {
       var orderSheet = sheet.getSheetByName('Orders') || createOrdersSheet(sheet);
       var data = orderSheet.getDataRange().getValues();

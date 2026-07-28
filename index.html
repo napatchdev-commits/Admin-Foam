@@ -1184,15 +1184,40 @@
       <div class="modal-body">
         
         <!-- Editable Status bar inside modal -->
-        <div style="background: rgba(212, 175, 55, 0.05); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
-          <div style="font-size: 0.95rem; font-weight: 500;">ปรับปรุงสถานะงานตัดโฟม:</div>
-          <div style="display: flex; gap: 0.5rem; align-items: center;">
-            <select id="modal-status-select" class="filter-select" style="padding: 0.4rem 0.8rem; width: auto; font-size: 0.85rem;">
-              <option value="รอดำเนินการ">รอดำเนินการ</option>
-              <option value="กำลังผลิต">กำลังผลิต</option>
-              <option value="เสร็จสิ้นแล้ว">เสร็จสิ้นแล้ว</option>
-            </select>
-            <button class="btn btn-gold btn-action" id="btn-update-status" onclick="updateOrderStatus()">อัปเดตสถานะ</button>
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+          <div style="flex: 1; min-width: 250px; background: rgba(212, 175, 55, 0.05); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+            <div style="font-size: 0.95rem; font-weight: 500;">สถานะงานตัดโฟม:</div>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <select id="modal-status-select" class="filter-select" style="padding: 0.4rem 0.8rem; width: auto; font-size: 0.85rem;">
+                <option value="รอดำเนินการ">รอดำเนินการ</option>
+                <option value="กำลังผลิต">กำลังผลิต</option>
+                <option value="เสร็จสิ้นแล้ว">เสร็จสิ้นแล้ว</option>
+              </select>
+              <button class="btn btn-gold btn-action" id="btn-update-status" onclick="updateOrderStatus()">อัปเดตสถานะ</button>
+            </div>
+          </div>
+          
+          <div style="flex: 1.2; min-width: 300px; background: rgba(14, 165, 233, 0.05); border: 1px solid rgba(14, 165, 233, 0.2); border-radius: 8px; padding: 1rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+            <div style="font-size: 0.95rem; font-weight: 600; color: #38bdf8; display: flex; align-items: center; gap: 0.4rem;">
+              🎨 แบบงาน Artwork:
+            </div>
+            
+            <div id="artwork-upload-controls" style="display: flex; align-items: center; gap: 0.5rem;">
+              <input type="file" id="artwork-file-input" accept="image/*" style="display: none;" onchange="handleArtworkSelect(event)">
+              <button class="btn btn-outline" onclick="document.getElementById('artwork-file-input').click()" style="padding: 0.4rem 0.6rem; font-size: 0.8rem; border-color: #0ea5e9; color: #0ea5e9;">
+                📎 เลือกแบบ
+              </button>
+              <button class="btn btn-gold" id="btn-upload-artwork" onclick="uploadArtworkImage()" style="padding: 0.4rem 0.6rem; font-size: 0.8rem; background: #0ea5e9; border-color: #0ea5e9; display: none;">
+                📤 อัปโหลด
+              </button>
+            </div>
+
+            <div id="artwork-delete-controls" style="display: none; align-items: center; gap: 0.5rem;">
+              <span style="font-size: 0.8rem; color: #22c55e; font-weight: 500;">อัปโหลดแล้ว</span>
+              <button class="btn btn-outline" onclick="deleteArtworkImage()" style="padding: 0.4rem 0.6rem; font-size: 0.8rem; border-color: #ef4444; color: #ef4444;">
+                🗑️ ลบรูป
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1257,10 +1282,18 @@
               </div>
             </div>
 
-            <div>
-              <div class="job-sheet-images-title">📸 รูปแบบตัวอย่างหรือรูปอ้างอิงสำหรับการตัดโฟม</div>
-              <div class="job-sheet-images-grid" id="sheet-images-container">
-                <!-- Image elements will be appended here dynamically -->
+            <div style="display: flex; gap: 1.5rem; margin-top: 1rem; flex-wrap: wrap;">
+              <div style="flex: 1; min-width: 250px;">
+                <div class="job-sheet-images-title">📸 รูปแบบตัวอย่างที่ลูกค้าสั่ง</div>
+                <div class="job-sheet-images-grid" id="sheet-images-container">
+                  <!-- Image elements will be appended here dynamically -->
+                </div>
+              </div>
+              <div style="flex: 1; min-width: 250px;">
+                <div class="job-sheet-images-title" style="color: #0284c7;">🎨 รูปแบบแบบงานผลิต (Artwork)</div>
+                <div class="job-sheet-images-grid" id="sheet-artwork-container">
+                  <!-- Artwork image will be appended here dynamically -->
+                </div>
               </div>
             </div>
 

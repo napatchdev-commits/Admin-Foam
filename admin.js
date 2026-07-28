@@ -1,4 +1,4 @@
-    // Paste your Google Sheets Web App URL here as a hardcoded fallback
+﻿    // Paste your Google Sheets Web App URL here as a hardcoded fallback
     const DEFAULT_GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbzH8TL29xMHAJ3LuwID751ifsOeS1wb7Bi28AtmHV1osLvxa9-SYFov5rGXET-zk_cvMw/exec";
 
     // Read URL from localStorage or use default fallback
@@ -7,6 +7,7 @@
     let allOrders = [];
     let allColors = [];
     let selectedOrder = null;
+    let selectedArtworkFile = null;
 
     // View Navigation Tabs
     function loadTab(tabName) {
@@ -259,7 +260,7 @@
       document.getElementById('sheet-color').innerText = selectedOrder.color;
       document.getElementById('sheet-notes').innerText = cleanNotes || '-';
 
-      // Load Images
+            // Load Images
       const imgContainer = document.getElementById('sheet-images-container');
       imgContainer.innerHTML = '';
       
@@ -275,13 +276,156 @@
         imgContainer.innerHTML = '<div style="color: #666; font-style: italic;">ไม่มีการอัปโหลดรูปภาพ</div>';
       }
 
+      // Load Artwork
+      const artworkContainer = document.getElementById('sheet-artwork-container');
+      if (artworkContainer) {
+        artworkContainer.innerHTML = '';
+        
+        const uploadControls = document.getElementById('artwork-upload-controls');
+        const deleteControls = document.getElementById('artwork-delete-controls');
+        const fileInput = document.getElementById('artwork-file-input');
+        const uploadBtn = document.getElementById('btn-upload-artwork');
+        
+        if (fileInput) fileInput.value = '';
+        if (uploadBtn) uploadBtn.style.display = 'none';
+        selectedArtworkFile = null;
+        
+        if (selectedOrder.artwork) {
+          const wrapper = document.createElement('div');
+          wrapper.className = 'job-sheet-image-wrapper';
+          const directUrl = getDirectImageUrl(selectedOrder.artwork);
+          wrapper.innerHTML = `<img src="${directUrl}" alt="Artwork" onclick="window.open('${directUrl}')" style="cursor: pointer; border: 2px solid #0ea5e9;">`;
+          artworkContainer.appendChild(wrapper);
+          
+          if (uploadControls) uploadControls.style.display = 'none';
+          if (deleteControls) deleteControls.style.display = 'flex';
+        } else {
+          artworkContainer.innerHTML = '<div style="color: #666; font-style: italic;">ยังไม่ได้อัปโหลดแบบงาน Artwork</div>';
+          
+          if (uploadControls) uploadControls.style.display = 'flex';
+          if (deleteControls) deleteControls.style.display = 'none';
+        }
+      }
+
       document.getElementById('order-modal').classList.add('active');
     }
 
-    function closeModal() {
+        function closeModal() {
       document.getElementById('order-modal').classList.remove('active');
       selectedOrder = null;
     }
+
+    function handleArtworkSelect(event) {
+      const file = event.target.files[0];
+      if (file) {
+        selectedArtworkFile = file;
+        const textDisplay = document.getElementById('artwork-filename-display');
+        if (textDisplay) textDisplay.innerText = file.name;
+        const uploadBtn = document.getElementById('btn-upload-artwork');
+        if (uploadBtn) uploadBtn.style.display = 'inline-flex';
+      }
+    }
+    window.handleArtworkSelect = handleArtworkSelect;
+
+    async function uploadArtworkImage() {
+      if (!selectedOrder) return;
+      if (!selectedArtworkFile) {
+        alert("กรุณาเลือกไฟล์ภาพแบบงาน (Artwork) ก่อนครับ");
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        const base64Data = e.target.result;
+        const btn = document.getElementById('btn-upload-artwork');
+        const origText = btn.innerText;
+        btn.disabled = true;
+        btn.innerText = "⏳ อัปโหลด...";
+        
+        try {
+          const response = await fetch(GOOGLE_SHEET_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+              action: 'updateArtwork',
+              id: selectedOrder.id,
+              artworkData: base64Data,
+              filename: selectedArtworkFile.name
+            }),
+            redirect: 'follow'
+          });
+          
+          if (response.ok) {
+            const res = await response.json();
+            if (res.success) {
+              alert("อัปโหลดแบบงาน Artwork สำเร็จ!");
+              selectedOrder.artwork = res.artwork;
+              // Refresh data
+              await fetchOrders();
+              openOrderModal(selectedOrder.id);
+            } else {
+              alert("อัปโหลดล้มเหลว: " + res.error);
+            }
+          } else {
+            alert("เชื่อมต่อเซิร์ฟเวอร์ผิดพลาด");
+          }
+        } catch (err) {
+          console.error(err);
+          alert("เกิดข้อผิดพลาดในการอัปโหลด");
+        } finally {
+          btn.disabled = false;
+          btn.innerText = origText;
+        }
+      };
+      reader.readAsDataURL(selectedArtworkFile);
+    }
+    window.uploadArtworkImage = uploadArtworkImage;
+
+    async function deleteArtworkImage() {
+      if (!selectedOrder) return;
+      if (!confirm("คุณต้องการลบรูปภาพแบบงาน (Artwork) ออกใช่หรือไม่?")) return;
+      
+      const btn = document.querySelector('button[onclick="deleteArtworkImage()"]');
+      const origText = btn ? btn.innerText : '';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerText = "⏳ กำลังลบ...";
+      }
+      
+      try {
+        const response = await fetch(GOOGLE_SHEET_URL, {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'updateArtwork',
+            id: selectedOrder.id,
+            artworkData: ""
+          }),
+          redirect: 'follow'
+        });
+        
+        if (response.ok) {
+          const res = await response.json();
+          if (res.success) {
+            alert("ลบรูปภาพแบบงานสำเร็จ!");
+            selectedOrder.artwork = "";
+            await fetchOrders();
+            openOrderModal(selectedOrder.id);
+          } else {
+            alert("ลบล้มเหลว: " + res.error);
+          }
+        } else {
+          alert("เชื่อมต่อเซิร์ฟเวอร์ผิดพลาด");
+        }
+      } catch (err) {
+        console.error(err);
+        alert("เกิดข้อผิดพลาดในการลบแบบงาน");
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerText = origText;
+        }
+      }
+    }
+    window.deleteArtworkImage = deleteArtworkImage;
 
     // Update order status call
     async function updateOrderStatus() {
