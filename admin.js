@@ -817,11 +817,23 @@
         const colorVal = order.color || '';
         const specs = `${sizeVal} / สี: ${colorVal}`;
 
-        // Check if already in bill
-        const isInBill = activeBillItems.some(item => item.id === order.id);
-        const actionBtn = isInBill 
-          ? `<button class="btn btn-outline" onclick="removeOrderFromBill(${order.id})" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; border-color: #ef4444; color: #ef4444;">✕ ลบออก</button>`
-          : `<button class="btn btn-gold" onclick="addOrderToBill(${order.id})" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">➕ เพิ่มเข้าบิล</button>`;
+                // Check if already in bill
+        const piecesInBill = activeBillItems.filter(item => item.id === order.id).length;
+        const sizeStr = order.size || '';
+        const qtyMatch = sizeStr.match(/จำนวน:\s*(\d+)/);
+        const qty = qtyMatch ? parseInt(qtyMatch[1]) : 1;
+        
+        let actionBtn = "";
+        if (piecesInBill === 0) {
+          actionBtn = `<button class="btn btn-gold" onclick="addOrderToBill(${order.id})" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; width: 100%; text-align: center; display: block; box-sizing: border-box;">➕ เพิ่มเข้าบิล</button>`;
+        } else if (piecesInBill < qty) {
+          actionBtn = `<div style="display: flex; flex-direction: column; gap: 4px; width: 100%; box-sizing: border-box;">
+            <button class="btn btn-gold" onclick="addOrderToBill(${order.id})" style="padding: 0.2rem 0.4rem; font-size: 0.7rem; text-align: center; display: block; width: 100%; box-sizing: border-box;">➕ เพิ่มที่เหลือ</button>
+            <button class="btn btn-outline" onclick="removeOrderFromBill(${order.id})" style="padding: 0.2rem 0.4rem; font-size: 0.7rem; border-color: #ef4444; color: #ef4444; text-align: center; display: block; width: 100%; box-sizing: border-box;">✕ ลบทั้งหมด</button>
+          </div>`;
+        } else {
+          actionBtn = `<button class="btn btn-outline" onclick="removeOrderFromBill(${order.id})" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; border-color: #ef4444; color: #ef4444; width: 100%; text-align: center; display: block; box-sizing: border-box;">✕ ลบออก</button>`;
+        }
 
         tr.innerHTML = `
           <td><strong>#${order.id}</strong></td>
@@ -928,12 +940,20 @@
 
     window.removeOrderFromBill = removeOrderFromBill;
 
-    function updateActiveBillTable() {
+    function removePieceFromBill(billItemId) {
+      activeBillItems = activeBillItems.filter(item => item.billItemId !== billItemId);
+      updateActiveBillTable();
+      populateBillingOrdersTable();
+    }
+
+    window.removePieceFromBill = removePieceFromBill;
+
+        function updateActiveBillTable() {
       const tbody = document.getElementById('active-bill-items');
       tbody.innerHTML = '';
       
       if (activeBillItems.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 2.5rem;">กรุณาเลือกรายการชิ้นงานจากฝั่งซ้ายเพิ่มเข้ามาในบิล</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 2.5rem;">กรุณาเลือกรายการชิ้นงานจากฝั่งซ้ายเพิ่มเข้ามาในบิล</td></tr>';
         document.getElementById('bill-subtotal').innerText = '0';
         document.getElementById('bill-total').innerText = '0';
         return;
@@ -982,8 +1002,11 @@
             <input type="file" id="finished-file-${item.id}-${item.pieceIndex}" accept="image/*" onchange="handleFinishedImageUpload(${item.id}, ${item.pieceIndex}, event)" style="display: none;">
             ${btnHtml}
           </td>
-          <td style="text-align: right;">
+          <td style="text-align: right; vertical-align: middle;">
             <input type="number" id="bill-price-${item.billItemId}" class="filter-select bill-item-price" value="${item.billPrice}" min="0" oninput="updateItemPrice('${item.billItemId}', this.value)" style="width: 75px; text-align: right; padding: 0.25rem 0.4rem; font-size: 0.85rem; display: inline-block;">
+          </td>
+          <td style="text-align: center; vertical-align: middle;">
+            <button class="btn btn-outline" onclick="removePieceFromBill('${item.billItemId}')" style="padding: 0.25rem 0.45rem; font-size: 0.8rem; border-color: #ef4444; color: #ef4444; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px;">🗑️ ลบ</button>
           </td>
         `;
         tbody.appendChild(tr);
