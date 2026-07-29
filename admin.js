@@ -1393,7 +1393,7 @@
               font-size: 0.9rem;
               font-weight: 500;
             }
-            @media print {
+                        @media print {
               body {
                 padding: 0;
               }
@@ -1406,9 +1406,92 @@
                 -webkit-print-color-adjust: exact;
               }
             }
+            
+            /* Compact layout for A4 page when items >= 7 */
+            body.compact {
+              padding: 5px;
+              font-size: 0.78rem;
+            }
+            body.compact .invoice-box {
+              padding: 5px;
+            }
+            body.compact .header-table {
+              margin-bottom: 12px;
+            }
+            body.compact .shop-logo {
+              width: 55px;
+              height: 55px;
+              margin-right: 10px;
+            }
+            body.compact .shop-name {
+              font-size: 1.25rem;
+            }
+            body.compact .shop-subtitle {
+              font-size: 0.72rem;
+            }
+            body.compact .title-badge {
+              font-size: 0.95rem;
+              padding: 4px 10px;
+            }
+            body.compact .metadata-table {
+              margin-bottom: 10px;
+            }
+            body.compact .metadata-table td {
+              padding: 2px 4px;
+              font-size: 0.78rem;
+            }
+            body.compact .items-table {
+              margin-bottom: 10px;
+            }
+            body.compact .items-table th {
+              padding: 4px 6px;
+              font-size: 0.78rem;
+            }
+            body.compact .items-table td {
+              padding: 4px 6px;
+              font-size: 0.78rem;
+            }
+            body.compact .items-table img {
+              width: 42px !important;
+              height: 42px !important;
+            }
+            body.compact .totals-container {
+              margin-top: 5px;
+            }
+            body.compact .totals-container td {
+              padding: 2px 4px;
+              font-size: 0.8rem;
+            }
+            body.compact .grand-total-row td {
+              font-size: 1.05rem;
+              padding-top: 4px;
+            }
+            body.compact .payment-card {
+              padding: 6px 10px;
+              gap: 10px;
+              max-width: 320px;
+              margin-top: 2px;
+            }
+            body.compact .qr-code-img {
+              width: 65px;
+              height: 65px;
+            }
+            body.compact .payment-details {
+              font-size: 0.75rem;
+            }
+            body.compact .signature-section {
+              margin-top: 15px;
+            }
+            body.compact .signature-box {
+              padding-top: 8px;
+              font-size: 0.78rem;
+            }
+            body.compact hr {
+              margin: 10px 0 5px 0 !important;
+            }
           </style>
         </head>
-        <body>
+        <body class="${items.length >= 7 ? 'compact' : ''}">
           <div class="invoice-box">
             
             <!-- Logo and Shop Name Header -->
