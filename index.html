@@ -581,7 +581,8 @@
 
       .modal-header,
       .modal-footer,
-      .modal-close {
+      .modal-close,
+      .no-print {
         display: none !important;
       }
 
@@ -1213,11 +1214,8 @@
               </button>
             </div>
 
-            <div id="artwork-delete-controls" style="display: none; align-items: center; gap: 0.5rem;">
-              <span style="font-size: 0.8rem; color: #22c55e; font-weight: 500;">อัปโหลดแล้ว</span>
-              <button class="btn btn-outline" onclick="deleteArtworkImage()" style="padding: 0.4rem 0.6rem; font-size: 0.8rem; border-color: #ef4444; color: #ef4444;">
-                🗑️ ลบรูป
-              </button>
+            <div id="artwork-status-display" style="font-size: 0.8rem; color: #38bdf8; font-weight: 500; display: none;">
+              (อัปโหลดแล้ว <span id="artwork-count-text">0</span> รูป)
             </div>
           </div>
         </div>

@@ -431,8 +431,40 @@ function doPost(e) {
       
       for (var i = 1; i < data.length; i++) {
         if (Number(data[i][0]) === Number(targetId)) {
-          orderSheet.getRange(i + 1, artworkIdx + 1).setValue(artworkUrl);
-          return jsonResponse({ success: true, artwork: artworkUrl });
+          var currentArtwork = String(data[i][artworkIdx] || '');
+          var urls = currentArtwork ? currentArtwork.split(',') : [];
+          if (artworkUrl) {
+            urls.push(artworkUrl);
+          }
+          var combinedUrls = urls.join(',');
+          orderSheet.getRange(i + 1, artworkIdx + 1).setValue(combinedUrls);
+          return jsonResponse({ success: true, artwork: combinedUrls });
+        }
+      }
+      return jsonResponse({ success: false, error: 'Order not found' });
+    }
+
+    if (action === 'deleteArtwork') {
+      var orderSheet = sheet.getSheetByName('Orders') || createOrdersSheet(sheet);
+      var data = orderSheet.getDataRange().getValues();
+      var headers = data[0];
+      
+      var artworkIdx = headers.indexOf('artwork');
+      if (artworkIdx === -1) {
+        return jsonResponse({ success: true, artwork: "" });
+      }
+      
+      var targetId = params.id;
+      var urlToDelete = params.url;
+      
+      for (var i = 1; i < data.length; i++) {
+        if (Number(data[i][0]) === Number(targetId)) {
+          var currentArtwork = String(data[i][artworkIdx] || '');
+          var urls = currentArtwork ? currentArtwork.split(',') : [];
+          urls = urls.filter(function(u) { return u.trim() !== urlToDelete.trim(); });
+          var combinedUrls = urls.join(',');
+          orderSheet.getRange(i + 1, artworkIdx + 1).setValue(combinedUrls);
+          return jsonResponse({ success: true, artwork: combinedUrls });
         }
       }
       return jsonResponse({ success: false, error: 'Order not found' });

@@ -1,4 +1,4 @@
-﻿    // Paste your Google Sheets Web App URL here as a hardcoded fallback
+    // Paste your Google Sheets Web App URL here as a hardcoded fallback
     const DEFAULT_GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbzH8TL29xMHAJ3LuwID751ifsOeS1wb7Bi28AtmHV1osLvxa9-SYFov5rGXET-zk_cvMw/exec";
 
     // Read URL from localStorage or use default fallback
@@ -276,34 +276,51 @@
         imgContainer.innerHTML = '<div style="color: #666; font-style: italic;">ไม่มีการอัปโหลดรูปภาพ</div>';
       }
 
-      // Load Artwork
+            // Load Artwork
       const artworkContainer = document.getElementById('sheet-artwork-container');
       if (artworkContainer) {
         artworkContainer.innerHTML = '';
         
-        const uploadControls = document.getElementById('artwork-upload-controls');
-        const deleteControls = document.getElementById('artwork-delete-controls');
         const fileInput = document.getElementById('artwork-file-input');
         const uploadBtn = document.getElementById('btn-upload-artwork');
+        const filenameDisplay = document.getElementById('artwork-filename-display');
+        const statusDisplay = document.getElementById('artwork-status-display');
+        const countText = document.getElementById('artwork-count-text');
         
         if (fileInput) fileInput.value = '';
         if (uploadBtn) uploadBtn.style.display = 'none';
+        if (filenameDisplay) filenameDisplay.innerText = 'ไม่ได้เลือกไฟล์';
         selectedArtworkFile = null;
         
-        if (selectedOrder.artwork) {
-          const wrapper = document.createElement('div');
-          wrapper.className = 'job-sheet-image-wrapper';
-          const directUrl = getDirectImageUrl(selectedOrder.artwork);
-          wrapper.innerHTML = `<img src="${directUrl}" alt="Artwork" onclick="window.open('${directUrl}')" style="cursor: pointer; border: 2px solid #0ea5e9;">`;
-          artworkContainer.appendChild(wrapper);
-          
-          if (uploadControls) uploadControls.style.display = 'none';
-          if (deleteControls) deleteControls.style.display = 'flex';
+        const artworkUrls = selectedOrder.artwork ? String(selectedOrder.artwork).split(',').map(u => u.trim()).filter(Boolean) : [];
+        
+        if (statusDisplay && countText) {
+          if (artworkUrls.length > 0) {
+            countText.innerText = artworkUrls.length;
+            statusDisplay.style.display = 'inline-flex';
+          } else {
+            statusDisplay.style.display = 'none';
+          }
+        }
+        
+        if (artworkUrls.length > 0) {
+          artworkUrls.forEach(url => {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'job-sheet-image-wrapper';
+            wrapper.style.display = 'inline-block';
+            wrapper.style.textAlign = 'center';
+            wrapper.style.marginRight = '10px';
+            wrapper.style.marginBottom = '10px';
+            
+            const directUrl = getDirectImageUrl(url);
+            wrapper.innerHTML = `
+              <img src="${directUrl}" alt="Artwork" onclick="window.open('${directUrl}')" style="cursor: pointer; border: 2px solid #0ea5e9; width: 120px; height: 120px; object-fit: contain; background: #fff; border-radius: 4px; display: block; margin-bottom: 4px;">
+              <button class="btn btn-outline no-print" onclick="deleteSpecificArtwork('${url}')" style="padding: 2px 6px; font-size: 0.68rem; border-color: #ef4444; color: #ef4444; width: 100%; box-sizing: border-box; border-radius: 4px;">🗑️ ลบรูป</button>
+            `;
+            artworkContainer.appendChild(wrapper);
+          });
         } else {
           artworkContainer.innerHTML = '<div style="color: #666; font-style: italic;">ยังไม่ได้อัปโหลดแบบงาน Artwork</div>';
-          
-          if (uploadControls) uploadControls.style.display = 'flex';
-          if (deleteControls) deleteControls.style.display = 'none';
         }
       }
 
@@ -327,7 +344,7 @@
     }
     window.handleArtworkSelect = handleArtworkSelect;
 
-    async function uploadArtworkImage() {
+        async function uploadArtworkImage() {
       if (!selectedOrder) return;
       if (!selectedArtworkFile) {
         alert("กรุณาเลือกไฟล์ภาพแบบงาน (Artwork) ก่อนครับ");
@@ -380,24 +397,17 @@
     }
     window.uploadArtworkImage = uploadArtworkImage;
 
-    async function deleteArtworkImage() {
+    async function deleteSpecificArtwork(url) {
       if (!selectedOrder) return;
-      if (!confirm("คุณต้องการลบรูปภาพแบบงาน (Artwork) ออกใช่หรือไม่?")) return;
-      
-      const btn = document.querySelector('button[onclick="deleteArtworkImage()"]');
-      const origText = btn ? btn.innerText : '';
-      if (btn) {
-        btn.disabled = true;
-        btn.innerText = "⏳ กำลังลบ...";
-      }
+      if (!confirm("คุณต้องการลบรูปภาพแบบงาน (Artwork) ชิ้นนี้ออกใช่หรือไม่?")) return;
       
       try {
         const response = await fetch(GOOGLE_SHEET_URL, {
           method: 'POST',
           body: JSON.stringify({
-            action: 'updateArtwork',
+            action: 'deleteArtwork',
             id: selectedOrder.id,
-            artworkData: ""
+            url: url
           }),
           redirect: 'follow'
         });
@@ -406,7 +416,7 @@
           const res = await response.json();
           if (res.success) {
             alert("ลบรูปภาพแบบงานสำเร็จ!");
-            selectedOrder.artwork = "";
+            selectedOrder.artwork = res.artwork;
             await fetchOrders();
             openOrderModal(selectedOrder.id);
           } else {
@@ -418,14 +428,9 @@
       } catch (err) {
         console.error(err);
         alert("เกิดข้อผิดพลาดในการลบแบบงาน");
-      } finally {
-        if (btn) {
-          btn.disabled = false;
-          btn.innerText = origText;
-        }
       }
     }
-    window.deleteArtworkImage = deleteArtworkImage;
+    window.deleteSpecificArtwork = deleteSpecificArtwork;
 
     // Update order status call
     async function updateOrderStatus() {
