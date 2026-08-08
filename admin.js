@@ -306,17 +306,31 @@
         if (artworkUrls.length > 0) {
           artworkUrls.forEach(url => {
             const wrapper = document.createElement('div');
-            wrapper.className = 'job-sheet-image-wrapper';
-            wrapper.style.display = 'inline-block';
-            wrapper.style.textAlign = 'center';
-            wrapper.style.marginRight = '10px';
-            wrapper.style.marginBottom = '10px';
+            wrapper.style.display = 'flex';
+            wrapper.style.flexDirection = 'column';
+            wrapper.style.gap = '6px';
             
             const directUrl = getDirectImageUrl(url);
-            wrapper.innerHTML = `
-              <img src="${directUrl}" alt="Artwork" onclick="window.open('${directUrl}')" style="cursor: pointer; border: 2px solid #0ea5e9; width: 120px; height: 120px; object-fit: contain; background: #fff; border-radius: 4px; display: block; margin-bottom: 4px;">
-              <button class="btn btn-outline no-print" onclick="deleteSpecificArtwork('${url}')" style="padding: 2px 6px; font-size: 0.68rem; border-color: #ef4444; color: #ef4444; width: 100%; box-sizing: border-box; border-radius: 4px;">🗑️ ลบรูป</button>
-            `;
+            
+            const imgWrapper = document.createElement('div');
+            imgWrapper.className = 'job-sheet-image-wrapper';
+            imgWrapper.style.border = '2px solid #0ea5e9';
+            imgWrapper.innerHTML = `<img src="${directUrl}" alt="Artwork" onclick="window.open('${directUrl}')" style="cursor: pointer;">`;
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'btn btn-outline no-print';
+            deleteBtn.style.padding = '4px 8px';
+            deleteBtn.style.fontSize = '0.75rem';
+            deleteBtn.style.borderColor = '#ef4444';
+            deleteBtn.style.color = '#ef4444';
+            deleteBtn.style.borderRadius = '6px';
+            deleteBtn.style.cursor = 'pointer';
+            deleteBtn.innerHTML = '🗑️ ลบรูป';
+            deleteBtn.onclick = () => deleteSpecificArtwork(url);
+            
+            wrapper.appendChild(imgWrapper);
+            wrapper.appendChild(deleteBtn);
+            
             artworkContainer.appendChild(wrapper);
           });
         } else {
